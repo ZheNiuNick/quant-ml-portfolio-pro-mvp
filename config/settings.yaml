@@ -1,0 +1,252 @@
+# config/settings.yaml
+database:
+  duckdb_path: duckdb/quant.duckdb
+
+data:
+  # US Market: S&P500 stocks (2010-2025)
+  # universe: 使用 S&P500（通过 factor_engine.py 自动获取）
+  # universe: ["AAPL","MSFT","GOOGL"]  # 如果需要手动指定，取消注释
+  start: "2010-01-01"  # 美股数据起始（yfinance通常从2010年开始有完整数据）
+  end: "2025-11-22"     # 数据截止日期（最新交易日）
+  frequency: "1D"
+  tz: "America/New_York"  # 美股时区
+  region: "us"           # 美股市场
+  instruments: "sp500"  # S&P500 指数成分股
+
+risk_model:
+  ewma_lambda: 0.94
+  shrinkage: "ledoit_wolf"
+  style_factors: ["log_mktcap","momentum_20d","volatility_20d"]
+  industry_meta: "data/meta/industry_map.parquet"
+
+optimizer:
+  lambda_risk: 5e-3
+  wmax: 0.10
+  industry_neutral_max: 0.02
+  turnover_max: 0.30
+  beta_neutral: true
+
+execution:
+  fee_bps: 2.0
+  slippage_bps_min: 1.0
+  adv_cap: 0.2
+
+# 策略配置（对齐 QLib）
+strategy:
+  type: "full_rebalance"  # "topk_dropout", "full_rebalance" 或 "portfolio_optimizer"
+  # Full Rebalance 参数（每日全量换仓）
+  topk: 20  # 持仓股票数量
+  # TopkDropoutStrategy 参数（对齐 QLib workflow_config_lightgbm_Alpha158.yaml，type="topk_dropout" 时使用）
+  n_drop: 3  # 每日替换数量
+  method_sell: "bottom"  # 卖出方法：bottom（评分最低）或 random
+  method_buy: "top"  # 买入方法：top（评分最高）或 random
+  # PortfolioOptimizer 参数（如果 type="portfolio_optimizer"）
+  optimizer_method: "inv"  # "inv", "gmv", "mvo", "rp"
+  optimizer_params:
+    lamb: 0  # 风险厌恶参数（用于 mvo）
+    delta: 0  # 换手限制
+    alpha: 0.0  # L2 正则化
+    scale_return: true  # 是否缩放收益
+  lookback_days: 60  # 计算协方差的历史窗口（天）
+
+# 回测配置（对齐 QLib）
+backtest:
+  engine: "simple"
+  initial_capital: 100000000  # 初始资金 1 亿（对齐 QLib）
+  benchmark:  # 基准配置
+    benchmark: "^GSPC"  # S&P500 指数（使用yfinance符号）
+    start_time: null  # 自动从权重日期范围推断
+    end_time: null
+  exchange_kwargs:  # 交易成本（美股）
+    limit_threshold: 0.20  # 美股涨跌停阈值（实际美股无涨跌停，但保留用于异常检测）
+    deal_price: "close"  # 成交价格：close
+    open_cost: 0.001  # 开仓成本 0.1%（美股典型佣金）
+    close_cost: 0.001  # 平仓成本 0.1%
+    min_cost: 0.0  # 最小手续费（美元，美股通常无最小手续费）
+
+model:
+  # 分桶数（建议先用 5，更稳）
+  rank_bins: 5  # 改回 5 bins，更稳定
+
+  # 特征与标签的对齐方式
+  feature_lag_days: 0            # >0 表示将特征整体向后滞后 n 天，以避免使用未来数据
+  label_options:
+    horizon_days: 5              # 预测的收益区间（5日收益，避免隔日收益噪声过大）
+    shift_days: 0                # 标签再向未来平移的天数，用于检查滞后/错位
+
+  # 评估方式（对齐 QLib 基准测试）
+  evaluation_mode: "qlib_segments"  # "walk_forward_cv" 或 "qlib_segments"
+
+  # Walk-Forward CV 配置（evaluation_mode = "walk_forward_cv" 时使用）
+  cv:
+    n_folds: 4
+
+  # QLib Segments 配置（evaluation_mode = "qlib_segments" 时使用）
+  # US Market: 使用更合理的时间段划分
+  segments:
+    train_start: "2010-01-01"   # 训练集：2010-2018（约9年）
+    train_end: "2018-12-31"
+    valid_start: "2019-01-01"    # 验证集：2019-2021（约3年），用于早停
+    valid_end: "2021-12-31"
+    test_start: "2022-01-01"     # 测试集：2022-2025，用于最终评估
+    test_end: "2025-11-22"       # 数据截止日期（最新交易日）
+
+  filter_by_icir: false  # 禁用ICIR过滤
+
+  # 特征质量过滤（可选）
+  feature_filter:
+    enabled: true
+    max_missing: 0.2
+    near_const_std: 1.0e-09
+    near_const_frac: 0.8
+
+  # 标签选择
+  use_qlib_label: false  # false = 使用标准 next-day return（美股推荐），true = 使用 QLib 标签（需要QLib数据）
+
+  # LightGBM 超参（对齐 QLib，参考 workflow_config_lightgbm_Alpha158.yaml）
+  params:
+    objective: lambdarank
+    metric: ndcg
+    ndcg_eval_at: [5, 10, 20]
+
+    learning_rate: 0.05        # 降低学习率，让模型更平滑
+    n_estimators: 500         # 配合较低学习率，提高迭代次数
+    num_leaves: 100            # 收敛更稳，减少过拟合
+    min_data_in_leaf: 50
+    max_depth: 6
+
+    feature_fraction: 0.7      # 降低特征采样比例，缓解过拟合
+    bagging_fraction: 0.7
+    bagging_freq: 1
+
+    lambda_l1: 0.5             # 增加正则化，抑制噪声特征
+    lambda_l2: 1.5
+    random_state: 42
+  
+  # 早停轮数（防止过拟合）
+  early_stopping_rounds: 200  # 增加早停轮数，允许模型训练更多轮
+
+  # CatBoost 参数（对齐 QLib，参考 workflow_config_catboost_Alpha158.yaml）
+  catboost_params:
+    loss_function: RMSE
+    iterations: 2000
+    learning_rate: 0.0421
+    depth: 6
+    subsample: 0.8789
+    num_leaves: 100  # QLib 特有参数
+    grow_policy: Lossguide  # QLib 特有参数
+    bootstrap_type: Bayesian  # 改为 Bayesian（CPU 支持），Poisson 仅支持 GPU
+    random_seed: 42
+
+  # XGBoost 参数（参考 qlib）
+  xgboost_params:
+    objective: reg:squarederror
+    max_depth: 6
+    learning_rate: 0.1
+    n_estimators: 2000
+    subsample: 0.9
+    colsample_bytree: 0.9
+    random_state: 42
+
+  # Transformer 参数（参考 qlib workflow_config_transformer_Alpha158.yaml）
+  transformer_params:
+    d_feat: 131  # 特征维度（Alpha158 有 131 个特征）
+    d_model: 64
+    nhead: 2
+    num_layers: 2
+    dropout: 0.0
+    n_epochs: 100
+    lr: 0.0001
+    batch_size: 2048
+    early_stop: 5
+    reg: 0.001
+    optimizer: adam
+    GPU: 0
+
+  # GRU 参数（参考 qlib workflow_config_gru_Alpha158.yaml）
+  gru_params:
+    d_feat: 131
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.0
+    n_epochs: 200
+    lr: 0.0002  # GRU 通常用较小的学习率
+    batch_size: 800
+    early_stop: 10
+    optimizer: adam
+    GPU: 0
+
+  # LSTM 参数（参考 qlib workflow_config_lstm_Alpha158.yaml）
+  lstm_params:
+    d_feat: 131
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.0
+    n_epochs: 200
+    lr: 0.001
+    batch_size: 800
+    early_stop: 10
+    optimizer: adam
+    GPU: 0
+
+  # 集成模型配置（包含所有模型：LightGBM, CatBoost, XGBoost, Transformer, GRU, LSTM）
+  ensemble_weights:
+    lightgbm: 0.10
+    catboost: 0.15
+    xgboost: 0.15
+    transformer: 0.20
+    gru: 0.20
+    lstm: 0.20
+  adaptive_weights: true  # 是否基于验证集表现自适应调整权重（推荐启用）
+  min_weight: 0.05  # 降低最小权重阈值，允许更灵活的权重分配
+  fusion_method: "voting_weighted"  # 融合方式：weighted_average（纯加权平均）, voting_weighted（投票+加权）
+
+# 因子处理配置（行业标准方法）
+factor_processing:
+  method: "industry_standard"  # "industry_standard" (MAD only), "light" (legacy), "qlib_style"
+  qlib_style: false  # 是否使用QLib风格（仅处理异常值，不标准化）
+  # 行业标准方法：
+  #   Step 1: MAD winsorize (更稳健的去极值方法)
+  #   Note: Rank normalization 已移除，以保留更多信息，避免信息损失导致负Rank IC
+  stability_filter:
+    enabled: false  # ✅ 启用稳定性过滤，移除不稳定因子
+    window: 60  # 滚动窗口
+    threshold: 3.0  # 滚动标准差阈值
+    min_coverage: 0.25  # 最小覆盖率
+
+# 因子增强配置（正交化等）
+factor_enhancement:
+  enabled: true  # 启用因子增强
+  
+  # 因子正交化（多步正交化，去除因子间相关性）
+  orthogonalization:
+    enabled: false  # 禁用正交化，避免信息损失
+    method: "gram_schmidt"  # "gram_schmidt" 或 "qr"
+    order_by_ic: true  # 是否按IC排序后再正交化（推荐）
+  
+  # 因子质量改进
+  improve_quality:
+    enabled: false  # ⚠️ 暂时禁用：发现会导致模型表现下降
+    # 问题：min_icir=0.01可能移除了有用的因子
+    # 建议：只移除NaN因子，不按ICIR筛选
+    min_ic: 0.0  # 最小IC（绝对值）
+    min_icir: 0.0  # 最小ICIR（绝对值），0表示只移除NaN因子
+    min_win_rate: 0.0  # 最小IC胜率，0表示不限制
+  
+  # 因子分析降维
+  factor_analysis:
+    enabled: false
+    n_factors: 20
+  
+  # 因子组合优化
+  factor_combination:
+    enabled: false  # 暂时禁用
+    method: "ic_weighted"  # "ic_weighted", "icir_weighted", "equal_weight"
+
+paths:
+  prices_parquet: "data/processed/prices.parquet"
+  factors_store: "data/factors/factor_store.parquet"
+  model_dir: "outputs/models"
+  metrics_path: "outputs/reports/metrics.json"
+  shap_top5_path: "outputs/reports/shap_top5.json"
+  portfolio_path: "outputs/portfolios/weights.parquet"

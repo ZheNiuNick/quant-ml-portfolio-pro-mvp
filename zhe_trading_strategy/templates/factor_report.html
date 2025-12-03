@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Single Factor Report - Quantitative Trading Strategy Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h2 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Daily Single Factor Report</h2>
+            </div>
+            <div class="card-body">
+                <!-- Date Selection - Changed to date input box -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="date-input" class="form-label">Select Date (YYYY-MM-DD)</label>
+                        <input type="date" class="form-control" id="date-input" placeholder="YYYY-MM-DD">
+                        <small class="form-text text-muted">Leave empty to use latest date</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button class="btn btn-primary" onclick="loadFactorReport()">
+                                <i class="fas fa-sync me-2"></i>Load Data
+                            </button>
+                            <button class="btn btn-secondary ms-2" onclick="loadLatestDate()">
+                                <i class="fas fa-calendar-day me-2"></i>Latest Date
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Available Date Range</label>
+                        <div id="date-range-info" class="text-muted small">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Factor Summary -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h4>Factor Performance Summary</h4>
+                        <div id="factor-summary" class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Factor Name</th>
+                                        <th>IC (Information Coefficient)</th>
+                                        <th>ICIR (IC Information Ratio)</th>
+                                        <th>Win Rate</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="factor-table-body">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Factor Visualization -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Top 20 Factor IC Ranking</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="top-factors-chart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Factor IC Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="ic-distribution-chart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factor Category Statistics -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <h4>Factor Category Statistics</h4>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card text-center bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-muted">Alpha101</h5>
+                                        <h3 class="text-primary">101</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-muted">TA-Lib</h5>
+                                        <h3 class="text-info">50-80</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-muted">Custom Factors</h5>
+                                        <h3 class="text-success">5</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center bg-light">
+                                    <div class="card-body">
+                                        <h5 class="text-muted">Total</h5>
+                                        <h3 class="text-dark">160+</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Load available date list
+    function loadAvailableDates() {
+        const dateRangeInfo = document.getElementById('date-range-info');
+        const url = API_BASE_URL ? `${API_BASE_URL}/api/factors/dates` : '/api/factors/dates';
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    dateRangeInfo.innerHTML = '<span class="text-danger">Failed to load</span>';
+                    console.error('Error loading dates:', data.error);
+                    return;
+                }
+                
+                if (data.dates && data.dates.length > 0) {
+                    const firstDate = data.dates[0];
+                    const lastDate = data.dates[data.dates.length - 1];
+                    dateRangeInfo.innerHTML = `${firstDate}  to  ${lastDate} ( ${data.dates.length}  dates)`;
+                    
+                    //  min  max
+                    const dateInput = document.getElementById('date-input');
+                    dateInput.min = firstDate;
+                    dateInput.max = lastDate;
+                } else {
+                    dateRangeInfo.innerHTML = '<span class="text-muted">No data available</span>';
+                }
+            })
+            .catch(error => {
+                dateRangeInfo.innerHTML = '<span class="text-danger">Failed to load</span>';
+                console.error('Error loading dates:', error);
+            });
+    }
+    
+    function loadLatestDate() {
+        const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-report/daily` : '/api/factor-report/daily';
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.latest_date) {
+                    document.getElementById('date-input').value = data.latest_date;
+                    loadFactorReport();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading latest date:', error);
+            });
+    }
+    
+    function loadFactorReport() {
+        const dateInput = document.getElementById('date-input');
+        const date = dateInput.value; // Get from date input
+        
+        const baseUrl = API_BASE_URL || '';
+        const url = date ? 
+            `${baseUrl}/api/factor-report/daily?date=${date}` : 
+            `${baseUrl}/api/factor-report/daily`;
+        
+        const tbody = document.getElementById('factor-table-body');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>';
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    if (data.error === "No data available") {
+                        tbody.innerHTML = 
+                            '<tr><td colspan="5" class="text-center text-muted">No data available</td></tr>';
+                    } else {
+                        tbody.innerHTML = 
+                            '<tr><td colspan="5" class="text-center text-danger">Failed to load，</td></tr>';
+                    }
+                    return;
+                }
+                updateFactorTable(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                tbody.innerHTML = 
+                    '<tr><td colspan="5" class="text-center text-danger">Failed to load，</td></tr>';
+            });
+    }
+
+    function updateFactorTable(data) {
+        //  Top 
+        const tbody = document.getElementById('factor-table-body');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>';
+        
+        const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-report/top-factors` : '/api/factor-report/top-factors';
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    if (data.error === "No data available") {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No data available</td></tr>';
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load，</td></tr>';
+                    }
+                    return;
+                }
+                
+                if (data.top_factors && data.top_factors.length > 0) {
+                    renderFactorTable(data.top_factors);
+                    renderTopFactorsChart(data.top_factors);
+                    renderICDistribution(data.top_factors);
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No data available</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading factors:', error);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load，</td></tr>';
+            });
+    }
+
+    function renderFactorTable(factors) {
+        const tbody = document.getElementById('factor-table-body');
+        
+        if (!factors || factors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No factor data available</td></tr>';
+            return;
+        }
+        
+        //  IC  0 （）
+        const validFactors = factors.filter(f => f.ic !== 0 && !isNaN(f.ic));
+        
+        if (validFactors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-warning">All factor IC values are 0, data may not be loaded correctly</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = validFactors.map(factor => `
+            <tr>
+                <td><code>${factor.name}</code></td>
+                <td class="${factor.ic > 0 ? 'text-success' : 'text-danger'}">${factor.ic.toFixed(4)}</td>
+                <td>${factor.icir ? factor.icir.toFixed(4) : 'N/A'}</td>
+                <td>${factor.win_rate ? (factor.win_rate * 100).toFixed(2) + '%' : 'N/A'}</td>
+                <td>${getFactorDescription(factor.name)}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderTopFactorsChart(factors) {
+        // Filter valid factors
+        const validFactors = factors.filter(f => f.ic !== 0 && !isNaN(f.ic));
+        
+        if (validFactors.length === 0) {
+            document.getElementById('top-factors-chart').innerHTML = 
+                '<div class="alert alert-warning text-center mt-5">No valid factor data available</div>';
+            return;
+        }
+        
+        const top20 = validFactors.slice(0, 20);
+        const trace = {
+            x: top20.map(f => f.name),
+            y: top20.map(f => f.ic),
+            type: 'bar',
+            marker: {
+                color: top20.map(f => f.ic > 0 ? '#2E86AB' : '#A23B72')
+            }
+        };
+        const layout = {
+            title: 'Top 20  IC Value',
+            xaxis: { title: 'Factor Name' },
+            yaxis: { title: 'IC' },
+            height: 400
+        };
+        Plotly.newPlot('top-factors-chart', [trace], layout);
+    }
+
+    function renderICDistribution(factors) {
+        // Filter valid factors
+        const validFactors = factors.filter(f => f.ic !== 0 && !isNaN(f.ic));
+        
+        if (validFactors.length === 0) {
+            document.getElementById('ic-distribution-chart').innerHTML = 
+                '<div class="alert alert-warning text-center mt-5">No valid factor data available</div>';
+            return;
+        }
+        
+        const ics = validFactors.map(f => f.ic);
+        const trace = {
+            x: ics,
+            type: 'histogram',
+            nbinsx: 30,
+            marker: { color: '#6C757D' }
+        };
+        const layout = {
+            title: 'Factor IC Distribution',
+            xaxis: { title: 'IC Value' },
+            yaxis: { title: 'Frequency' },
+            height: 400
+        };
+        Plotly.newPlot('ic-distribution-chart', [trace], layout);
+    }
+
+    function getFactorDescription(factorName) {
+        if (factorName.startsWith('ALPHA')) {
+            return 'Alpha101 Factors';
+        } else if (factorName.startsWith('TALIB')) {
+            return 'TA-Lib Metric';
+        } else if (factorName.startsWith('CUSTOM')) {
+            return 'Custom';
+        }
+        return '-';
+    }
+
+    // Auto-load on page load
+    window.addEventListener('DOMContentLoaded', () => {
+        loadAvailableDates();
+        loadFactorReport();
+    });
+</script>
+{% endblock %}
+

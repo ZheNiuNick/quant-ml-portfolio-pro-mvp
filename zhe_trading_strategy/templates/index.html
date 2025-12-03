@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Project Overview - Quantitative Trading Strategy Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0"><i class="fas fa-info-circle me-2"></i>Project Overview</h2>
+            </div>
+            <div class="card-body">
+                <h3 class="mb-4">Machine Learning-Based Quantitative Trading Strategy</h3>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-bullseye me-2"></i>Project Objectives</h4>
+                        <p class="lead">
+                            Build a machine learning-based quantitative trading system that achieves stable 
+                            excess returns in the S&P500 stock pool through multi-factor models and ranking learning algorithms.
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-cogs me-2"></i>Core Features</h4>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>160+  quantitative factors（Alpha101 + TA-Lib + Custom）</li>
+                            <li><i class="fas fa-check text-success me-2"></i>LightGBM Ranker  ranking learning model</li>
+                            <li><i class="fas fa-check text-success me-2"></i>TopK Dropout  portfolio optimization strategy</li>
+                            <li><i class="fas fa-check text-success me-2"></i> real-time trade execution（IBKR API）</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <h4 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Strategy Performance</h4>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Annual Return</h5>
+                                <h3 class="text-success" id="annual-return">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Sharpe Ratio</h5>
+                                <h3 class="text-info" id="sharpe-ratio">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Max Drawdown</h5>
+                                <h3 class="text-danger" id="max-drawdown">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Position Count</h5>
+                                <h3 class="text-primary">20</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <h4 class="mb-3"><i class="fas fa-sitemap me-2"></i>Technical Architecture</h4>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5><i class="fas fa-database me-2"></i>Data Layer</h5>
+                                <ul>
+                                    <li>yfinance Data Fetching</li>
+                                    <li>DuckDB Data Storage</li>
+                                    <li>Parquet Format Storage</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5><i class="fas fa-brain me-2"></i>Model Layer</h5>
+                                <ul>
+                                    <li>Factor Engineering (160+ factors)</li>
+                                    <li>LightGBM Ranker</li>
+                                    <li>Model Training & Validation</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5><i class="fas fa-exchange-alt me-2"></i>Trading Layer</h5>
+                                <ul>
+                                    <li>Portfolio Optimization</li>
+                                    <li>IBKR Real-time Trading</li>
+                                    <li>Risk Control</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Load performance metrics
+    function loadPerformanceMetrics() {
+        // Show loading state
+        ['annual-return', 'sharpe-ratio', 'max-drawdown'].forEach(id => {
+            document.getElementById(id).textContent = 'Loading...';
+        });
+        
+        const url = API_BASE_URL ? `${API_BASE_URL}/api/performance/summary` : '/api/performance/summary';
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    ['annual-return', 'sharpe-ratio', 'max-drawdown'].forEach(id => {
+                        document.getElementById(id).innerHTML = 
+                            '<span class="text-danger">Failed to load data, please check backend service</span>';
+                    });
+                    return;
+                }
+                
+                // Use new field names
+                document.getElementById('annual-return').textContent = 
+                    data.annual_return ? 
+                    (data.annual_return * 100).toFixed(2) + '%' : 'N/A';
+                document.getElementById('sharpe-ratio').textContent = 
+                    data.sharpe ? 
+                    data.sharpe.toFixed(2) : 'N/A';
+                document.getElementById('max-drawdown').textContent = 
+                    data.max_drawdown ? 
+                    (Math.abs(data.max_drawdown) * 100).toFixed(2) + '%' : 'N/A';
+            })
+            .catch(error => {
+                console.error('Error loading performance:', error);
+                ['annual-return', 'sharpe-ratio', 'max-drawdown'].forEach(id => {
+                    document.getElementById(id).innerHTML = 
+                        '<span class="text-danger">Failed to load data, please check backend service</span>';
+                });
+            });
+    }
+    
+    // Execute on page load
+    window.addEventListener('DOMContentLoaded', loadPerformanceMetrics);
+</script>
+{% endblock %}
+

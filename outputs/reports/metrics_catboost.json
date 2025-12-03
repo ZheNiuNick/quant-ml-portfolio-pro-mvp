@@ -1,0 +1,5 @@
+{
+  "mode": "catboost_qlib_segments",
+  "test_rank_ic": 0.002508715449999331,
+  "test_rank_icir": 0.014969370861715202
+}

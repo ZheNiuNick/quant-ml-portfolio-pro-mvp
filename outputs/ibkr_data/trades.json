@@ -1,0 +1,318 @@
+{
+  "timestamp": "20251203_151611",
+  "trades": [
+    {
+      "time": "2025-12-03 18:55:31",
+      "symbol": "HON",
+      "side": "SELL",
+      "quantity": 50.0,
+      "price": 193.73,
+      "amount": 9686.5,
+      "commission": 1.0083,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:55:00",
+      "symbol": "AMZN",
+      "side": "SELL",
+      "quantity": 40.0,
+      "price": 232.07,
+      "amount": 9282.8,
+      "commission": 1.00664,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:43:57",
+      "symbol": "LRCX",
+      "side": "SELL",
+      "quantity": 61.0,
+      "price": 159.27,
+      "amount": 9715.470000000001,
+      "commission": 1.010126,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:25:20",
+      "symbol": "TMO",
+      "side": "BUY",
+      "quantity": 16.0,
+      "price": 586.15,
+      "amount": 9378.4,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:23:16",
+      "symbol": "DE",
+      "side": "BUY",
+      "quantity": 20.0,
+      "price": 477.48,
+      "amount": 9549.6,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:07",
+      "symbol": "UBER",
+      "side": "SELL",
+      "quantity": 3.0,
+      "price": 91.09,
+      "amount": 273.27,
+      "commission": 1.000498,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:07",
+      "symbol": "T",
+      "side": "BUY",
+      "quantity": 27.0,
+      "price": 25.5,
+      "amount": 688.5,
+      "commission": 0.135,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:05",
+      "symbol": "QCOM",
+      "side": "SELL",
+      "quantity": 55.0,
+      "price": 172.36,
+      "amount": 9479.800000000001,
+      "commission": 1.00913,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:04",
+      "symbol": "T",
+      "side": "BUY",
+      "quantity": 300.0,
+      "price": 25.5,
+      "amount": 7650.0,
+      "commission": 1.5,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:04",
+      "symbol": "T",
+      "side": "BUY",
+      "quantity": 50.0,
+      "price": 25.5,
+      "amount": 1275.0,
+      "commission": 0.25,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:04",
+      "symbol": "ADBE",
+      "side": "SELL",
+      "quantity": 30.0,
+      "price": 324.94,
+      "amount": 9748.2,
+      "commission": 1.00498,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:04",
+      "symbol": "GE",
+      "side": "SELL",
+      "quantity": 32.0,
+      "price": 288.67,
+      "amount": 9237.44,
+      "commission": 1.005312,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:03",
+      "symbol": "MCK",
+      "side": "BUY",
+      "quantity": 11.0,
+      "price": 806.04,
+      "amount": 8866.439999999999,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:03",
+      "symbol": "ANET",
+      "side": "BUY",
+      "quantity": 75.0,
+      "price": 127.79,
+      "amount": 9584.25,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:03",
+      "symbol": "NVDA",
+      "side": "BUY",
+      "quantity": 1.0,
+      "price": 180.58,
+      "amount": 180.58,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:02",
+      "symbol": "ABBV",
+      "side": "BUY",
+      "quantity": 41.0,
+      "price": 229.38,
+      "amount": 9404.58,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-03 18:22:02",
+      "symbol": "MU",
+      "side": "BUY",
+      "quantity": 1.0,
+      "price": 233.71,
+      "amount": 233.71,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 20:53:10",
+      "symbol": "AAPL",
+      "side": "BUY",
+      "quantity": 33.0,
+      "price": 285.86,
+      "amount": 9433.380000000001,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 20:24:30",
+      "symbol": "NTAP",
+      "side": "SELL",
+      "quantity": 36.0,
+      "price": 115.8,
+      "amount": 4168.8,
+      "commission": 1.005976,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:45:21",
+      "symbol": "NVDA",
+      "side": "BUY",
+      "quantity": 52.0,
+      "price": 181.1,
+      "amount": 9417.199999999999,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:29",
+      "symbol": "LYV",
+      "side": "SELL",
+      "quantity": 31.0,
+      "price": 129.64,
+      "amount": 4018.8399999999997,
+      "commission": 1.005146,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:13",
+      "symbol": "DLR",
+      "side": "SELL",
+      "quantity": 25.0,
+      "price": 156.58,
+      "amount": 3914.5000000000005,
+      "commission": 1.00415,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:13",
+      "symbol": "MHK",
+      "side": "SELL",
+      "quantity": 33.0,
+      "price": 114.96,
+      "amount": 3793.68,
+      "commission": 1.005478,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:13",
+      "symbol": "TPR",
+      "side": "SELL",
+      "quantity": 37.0,
+      "price": 108.82,
+      "amount": 4026.3399999999997,
+      "commission": 1.006142,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:13",
+      "symbol": "IRM",
+      "side": "SELL",
+      "quantity": 44.0,
+      "price": 82.35,
+      "amount": 3623.3999999999996,
+      "commission": 1.007304,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:12",
+      "symbol": "CRM",
+      "side": "SELL",
+      "quantity": 41.0,
+      "price": 235.11,
+      "amount": 9639.51,
+      "commission": 1.006806,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:12",
+      "symbol": "KLAC",
+      "side": "BUY",
+      "quantity": 7.0,
+      "price": 1192.19,
+      "amount": 8345.33,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:11",
+      "symbol": "GE",
+      "side": "BUY",
+      "quantity": 32.0,
+      "price": 289.68,
+      "amount": 9269.76,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:11",
+      "symbol": "CAT",
+      "side": "SELL",
+      "quantity": 31.0,
+      "price": 582.64,
+      "amount": 18061.84,
+      "commission": 1.005146,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:11",
+      "symbol": "CVX",
+      "side": "SELL",
+      "quantity": 87.0,
+      "price": 149.69,
+      "amount": 13023.03,
+      "commission": 1.014442,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-02 19:44:11",
+      "symbol": "NFLX",
+      "side": "SELL",
+      "quantity": 86.0,
+      "price": 109.42,
+      "amount": 9410.12,
+      "commission": 1.014276,
+      "status": "FILLED"
+    }
+  ],
+  "total_trades": 31,
+  "new_trades_today": 0,
+  "source": "ib_insync"
+}

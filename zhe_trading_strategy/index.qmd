@@ -1,0 +1,59 @@
+---
+title: "Candlestick Pattern Recognition Enhanced MACD-ATR Strategy for Cryptocurrency Trading"
+format:
+  html:
+    toc: true
+    code-fold: false
+    code-tools: false
+    theme: cosmo
+    embed-resources: true
+    smooth-scroll: true
+    df-print: paged
+jupyter: python3
+kernel: venv
+execute:
+  echo: false
+---
+
+:::{.cell}
+<style>
+/* 图片、表格、图表统一上下留空 */
+img, table, .plotly-graph-div {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+/* 缩小饼图大小 */
+.plotly-graph-div .slice path {
+  transform: scale(0.8); /* 80% 缩放 */
+  transform-origin: center;
+}
+</style>
+:::
+
+**Authors**: Zhe Niu (M.S. FinTech), 
+
+
+# Trading Strategy & Plan
+
+This project presents a candlestick pattern-enhanced MACD and ATR strategy that detects market microstructure patterns and swing trends in the cryptocurrency market. We combine rule-based indicators (MACD, ATR, EMA) with a CNN classifier trained to recognize candlestick pattern windows. The goal is to improve entry/exit accuracy in BTC/USDT trading through deep learning-enhanced pattern recognition.
+
+## Candlestick Pattern System for Market Trend Recognition
+
+Understanding and classifying **Japanese candlestick patterns** is critical for interpreting trader sentiment and anticipating future price movements. The chart below presents a comprehensive taxonomy of **bullish**, **bearish**, and **neutral** candlestick configurations widely used in technical analysis. These patterns serve as visual signals for **trend reversals** and **continuations** in volatile markets like cryptocurrency.
+
+Recent research by Mersal et al. (2025) demonstrates that integrating **61 distinct candlestick patterns** with **CNN-based classification systems** can drastically enhance the precision of market trend prediction. Their work applies a **sliding window segmentation** and **TA-Lib pattern recognition** to extract structured features from OHLC charts, followed by **CNN training** to classify bullish/bearish trends. Their approach achieved up to **99.3% accuracy**, far exceeding traditional strategies.
+
+This strategy draws inspiration from their methodology by using candlestick chart windows labeled with directional trends, validated with moving averages and additional technical indicators. These patterns—such as the **Morning Star**, **Engulfing**, **Doji**, and **Shooting Star**—provide reliable inputs for deep learning models, enabling the detection of microstructure signals across 15-minute intervals.
+
+
+## Core Strategy Concepts
+
+Our strategy is based on the following key elements:
+
+- **MACD Trend Signals**: Using MACD histogram and signal line crossovers to confirm trend changes
+- **EMA Price Position**: Price location relative to EMA30 to determine overall trend direction
+- **ATR Dynamic Stop-Loss**: Adaptive adjustment of stop-loss levels based on market volatility
+- **Visual Pattern Recognition**: Using CNN deep learning models to identify candlestick patterns
+- **Signal Confirmation Mechanism**: Requiring multiple consecutive signals before executing trades to reduce false breakouts
+

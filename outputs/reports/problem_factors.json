@@ -1,0 +1,79 @@
+[
+  {
+    "factor": "Alpha27",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.40007253626813405,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha68",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha71",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0007503751875937969,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha73",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha76",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha77",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0,
+    "unique_count": 1,
+    "value": 0.25
+  },
+  {
+    "factor": "Alpha82",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0,
+    "unique_count": 1,
+    "value": -0.25
+  },
+  {
+    "factor": "Alpha86",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha87",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha92",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0015007503751875938,
+    "unique_count": 1,
+    "value": 0.0
+  },
+  {
+    "factor": "Alpha96",
+    "issue": "\u5168\u4e3a\u5e38\u6570",
+    "nan_rate": 0.0017508754377188595,
+    "unique_count": 1,
+    "value": 0.0
+  }
+]

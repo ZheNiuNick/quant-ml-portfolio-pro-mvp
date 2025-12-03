@@ -1,0 +1,144 @@
+{
+  "total_factors": 165,
+  "thresholds": {
+    "icir_0.01": {
+      "count": 154,
+      "factors": [
+        "Alpha1",
+        "Alpha2",
+        "Alpha3",
+        "Alpha4",
+        "Alpha5",
+        "Alpha6",
+        "Alpha7",
+        "Alpha8",
+        "Alpha9",
+        "Alpha10",
+        "Alpha11",
+        "Alpha12",
+        "Alpha13",
+        "Alpha14",
+        "Alpha15",
+        "Alpha17",
+        "Alpha18",
+        "Alpha19",
+        "Alpha20",
+        "Alpha21"
+      ]
+    },
+    "icir_0.02": {
+      "count": 137,
+      "factors": [
+        "Alpha1",
+        "Alpha2",
+        "Alpha4",
+        "Alpha6",
+        "Alpha8",
+        "Alpha9",
+        "Alpha11",
+        "Alpha17",
+        "Alpha18",
+        "Alpha19",
+        "Alpha20",
+        "Alpha23",
+        "Alpha24",
+        "Alpha25",
+        "Alpha26",
+        "Alpha28",
+        "Alpha29",
+        "Alpha30",
+        "Alpha32",
+        "Alpha33"
+      ]
+    },
+    "icir_0.05": {
+      "count": 83,
+      "factors": [
+        "Alpha1",
+        "Alpha2",
+        "Alpha4",
+        "Alpha11",
+        "Alpha18",
+        "Alpha19",
+        "Alpha20",
+        "Alpha24",
+        "Alpha28",
+        "Alpha30",
+        "Alpha32",
+        "Alpha33",
+        "Alpha34",
+        "Alpha35",
+        "Alpha36",
+        "Alpha37",
+        "Alpha39",
+        "Alpha40",
+        "Alpha41",
+        "Alpha43"
+      ]
+    },
+    "icir_0.5": {
+      "count": 0,
+      "factors": []
+    },
+    "icir_1.0": {
+      "count": 0,
+      "factors": []
+    }
+  },
+  "industry_standard": {
+    "strict": {
+      "count": 0,
+      "factors": [],
+      "criteria": {
+        "min_ic": 0.02,
+        "min_icir": 0.5,
+        "min_win_rate": 0.6,
+        "require_significant": true
+      }
+    },
+    "moderate": {
+      "count": 33,
+      "factors": [
+        "Alpha2",
+        "Alpha4",
+        "Alpha19",
+        "Alpha20",
+        "Alpha24",
+        "Alpha30",
+        "Alpha32",
+        "Alpha34",
+        "Alpha39",
+        "Alpha40",
+        "Alpha43",
+        "Alpha52",
+        "Alpha55",
+        "Alpha63",
+        "Alpha66",
+        "Alpha69",
+        "Alpha89",
+        "Alpha90",
+        "Alpha93",
+        "Alpha94",
+        "Alpha101",
+        "WILLR_14",
+        "BB_WIDTH",
+        "AD",
+        "ADOSC",
+        "MINUS_DI_14",
+        "PLUS_DI_14",
+        "STOCH_K",
+        "STOCH_D",
+        "STOCHF_K",
+        "STOCHF_D",
+        "BOP",
+        "CUSTOM_PPF"
+      ],
+      "criteria": {
+        "min_ic": 0.005,
+        "min_icir": 0.05,
+        "min_win_rate": 0.5,
+        "require_significant": false
+      }
+    }
+  }
+}

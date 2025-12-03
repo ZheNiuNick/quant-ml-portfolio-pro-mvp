@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Workflow - Quantitative Trading Strategy Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Detailed Workflow</h2>
+            </div>
+            <div class="card-body">
+                <!-- Workflow Steps -->
+                <div class="workflow-steps mb-5">
+                    <div class="step-item mb-4" data-step="1">
+                        <div class="d-flex align-items-start">
+                            <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                <strong>1</strong>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4>Data Acquisition & Preprocessing</h4>
+                                <p><strong>Data Source:</strong> yfinance API for S&P500 constituent daily data</p>
+                                <ul>
+                                    <li>Fetch OHLCV data (2010-2025)</li>
+                                    <li>Handle stock splits, dividends, and adjustments</li>
+                                    <li>Data cleaning and outlier handling</li>
+                                    <li>Store in DuckDB and Parquet format</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item mb-4" data-step="2">
+                        <div class="d-flex align-items-start">
+                            <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                <strong>2</strong>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4>Factor Calculation</h4>
+                                <p><strong>Factor Types:</strong> Alpha101 + TA-Lib + Custom Factors</p>
+                                <ul>
+                                    <li><strong>Alpha101:</strong> 101 classic quantitative factors (WorldQuant)</li>
+                                    <li><strong>TA-Lib:</strong> 50-80 technical indicator factors (RSI, MACD, Bollinger Bands, etc.)</li>
+                                    <li><strong>Custom Factors:</strong> 5 factors optimized for S&P500</li>
+                                    <li>Total of <strong>160+ factors</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item mb-4" data-step="3">
+                        <div class="d-flex align-items-start">
+                            <div class="step-number bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                <strong>3</strong>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4>Factor Processing & Enhancement</h4>
+                                <p><strong>Processing Method:</strong> Industry-standard MAD Winsorize</p>
+                                <ul>
+                                    <li>MAD (Median Absolute Deviation) outlier removal for robustness</li>
+                                    <li>Preserve original factor distribution to avoid information loss</li>
+                                    <li>Process by date groups to avoid look-ahead bias</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item mb-4" data-step="4">
+                        <div class="d-flex align-items-start">
+                            <div class="step-number bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                <strong>4</strong>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4>Model Training</h4>
+                                <p><strong>Model:</strong> LightGBM Ranker (Learning to Rank)</p>
+                                <ul>
+                                    <li><strong>Label:</strong> Future 5-day return ranking (avoid next-day noise)</li>
+                                    <li><strong>Loss Function:</strong> LambdaRank (NDCG optimization)</li>
+                                    <li><strong>Training Set:</strong> 2010-2018 (9 years)</li>
+                                    <li><strong>Validation Set:</strong> 2019-2021 (3 years, for early stopping)</li>
+                                    <li><strong>Test Set:</strong> 2022-2025 (for final evaluation)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item mb-4" data-step="5">
+                        <div class="d-flex align-items-start">
+                            <div class="step-number bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                <strong>5</strong>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4>Prediction Generation</h4>
+                                <p><strong>Prediction Content:</strong> Future return ranking score for each stock</p>
+                                <ul>
+                                    <li>Generate predictions for all stocks on the latest date</li>
+                                    <li>Output prediction scores (higher = better expected returns)</li>
+                                    <li>Save prediction results for portfolio optimization</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item mb-4" data-step="6">
+                        <div class="d-flex align-items-start">
+                            <div class="step-number bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                <strong>6</strong>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4>Portfolio Optimization</h4>
+                                <p><strong>Strategy:</strong> TopK Dropout Strategy</p>
+                                <ul>
+                                    <li>Select <strong>20 stocks</strong> with highest prediction scores</li>
+                                    <li>Replace <strong>3 stocks</strong> daily (sell lowest-rated, buy highest-rated)</li>
+                                    <li>Equal weight allocation (5% per stock)</li>
+                                    <li>Generate daily weight files</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item mb-4" data-step="7">
+                        <div class="d-flex align-items-start">
+                            <div class="step-number bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                <strong>7</strong>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4>Real-time Trade Execution</h4>
+                                <p><strong>Trading Platform:</strong> Interactive Brokers (IBKR)</p>
+                                <ul>
+                                    <li>Read daily weight files</li>
+                                    <li>Get current positions</li>
+                                    <li>Calculate trade orders (buy/sell)</li>
+                                    <li>Execute trades via IBKR API</li>
+                                    <li>Monitor order status and fills</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

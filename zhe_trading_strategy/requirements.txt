@@ -1,0 +1,13 @@
+Flask>=3.0.0
+pandas>=2.0
+numpy>=1.24
+yfinance>=0.2.40
+duckdb>=1.0.0
+pyarrow>=14.0.0
+plotly>=5.22.0
+PyYAML>=6.0
+python-dotenv>=1.0.1
+gunicorn>=21.2.0
+scikit-learn>=1.4.0
+lightgbm>=4.0.0
+

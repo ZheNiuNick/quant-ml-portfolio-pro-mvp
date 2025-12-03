@@ -1,0 +1,168 @@
+{
+  "timestamp": "20251203_151611",
+  "positions": [
+    {
+      "symbol": "NOW",
+      "shares": 12.0,
+      "avg_cost": 822.98090835,
+      "current_price": 829.15,
+      "market_value": 9949.8,
+      "unrealized_pnl": 74.02909979999913
+    },
+    {
+      "symbol": "MCK",
+      "shares": 11.0,
+      "avg_cost": 806.1309091,
+      "current_price": 807.28,
+      "market_value": 8880.08,
+      "unrealized_pnl": 12.639999899999111
+    },
+    {
+      "symbol": "T",
+      "shares": 377.0,
+      "avg_cost": 25.505,
+      "current_price": 25.42,
+      "market_value": 9583.34,
+      "unrealized_pnl": -32.04499999999898
+    },
+    {
+      "symbol": "ORCL",
+      "shares": 47.0,
+      "avg_cost": 201.29083405,
+      "current_price": 207.58,
+      "market_value": 9756.26,
+      "unrealized_pnl": 295.5907996500006
+    },
+    {
+      "symbol": "PANW",
+      "shares": 50.0,
+      "avg_cost": 187.93923,
+      "current_price": 192.87,
+      "market_value": 9643.5,
+      "unrealized_pnl": 246.53849999999977
+    },
+    {
+      "symbol": "MU",
+      "shares": 41.0,
+      "avg_cost": 240.38317075,
+      "current_price": 233.87,
+      "market_value": 9588.67,
+      "unrealized_pnl": -267.04000075
+    },
+    {
+      "symbol": "NVDA",
+      "shares": 53.0,
+      "avg_cost": 181.12792455,
+      "current_price": 180.74,
+      "market_value": 9579.220000000001,
+      "unrealized_pnl": -20.560001149998925
+    },
+    {
+      "symbol": "DE",
+      "shares": 20.0,
+      "avg_cost": 477.53,
+      "current_price": 480.36,
+      "market_value": 9607.2,
+      "unrealized_pnl": 56.60000000000082
+    },
+    {
+      "symbol": "ABBV",
+      "shares": 41.0,
+      "avg_cost": 229.40439025,
+      "current_price": 230.41,
+      "market_value": 9446.81,
+      "unrealized_pnl": 41.22999974999962
+    },
+    {
+      "symbol": "PLTR",
+      "shares": 56.0,
+      "avg_cost": 164.63733035,
+      "current_price": 175.1,
+      "market_value": 9805.6,
+      "unrealized_pnl": 585.9095003999989
+    },
+    {
+      "symbol": "CAT",
+      "shares": 17.0,
+      "avg_cost": 568.7525,
+      "current_price": 590.15,
+      "market_value": 10032.55,
+      "unrealized_pnl": 363.7574999999987
+    },
+    {
+      "symbol": "UBER",
+      "shares": 106.0,
+      "avg_cost": 86.69884955,
+      "current_price": 90.67,
+      "market_value": 9611.02,
+      "unrealized_pnl": 420.94194769999956
+    },
+    {
+      "symbol": "ANET",
+      "shares": 75.0,
+      "avg_cost": 127.80333335,
+      "current_price": 128.37,
+      "market_value": 9627.75,
+      "unrealized_pnl": 42.499998750000145
+    },
+    {
+      "symbol": "ETN",
+      "shares": 28.0,
+      "avg_cost": 340.5357143,
+      "current_price": 335.23,
+      "market_value": 9386.44,
+      "unrealized_pnl": -148.56000039999935
+    },
+    {
+      "symbol": "TMO",
+      "shares": 16.0,
+      "avg_cost": 586.2125,
+      "current_price": 585.51,
+      "market_value": 9368.16,
+      "unrealized_pnl": -11.239999999999782
+    },
+    {
+      "symbol": "CRWD",
+      "shares": 19.0,
+      "avg_cost": 507.7726316,
+      "current_price": 516.97,
+      "market_value": 9822.43,
+      "unrealized_pnl": 174.7499996000003
+    },
+    {
+      "symbol": "INTU",
+      "shares": 15.0,
+      "avg_cost": 631.24666665,
+      "current_price": 646.45,
+      "market_value": 9696.75,
+      "unrealized_pnl": 228.0500002500014
+    },
+    {
+      "symbol": "IBM",
+      "shares": 31.0,
+      "avg_cost": 306.0612484,
+      "current_price": 302.9,
+      "market_value": 9389.9,
+      "unrealized_pnl": -97.99870040000104
+    },
+    {
+      "symbol": "AAPL",
+      "shares": 33.0,
+      "avg_cost": 285.89030305,
+      "current_price": 284.79,
+      "market_value": 9398.070000000002,
+      "unrealized_pnl": -36.310000649999324
+    },
+    {
+      "symbol": "KLAC",
+      "shares": 7.0,
+      "avg_cost": 1192.33285715,
+      "current_price": 1206.16,
+      "market_value": 8443.12,
+      "unrealized_pnl": 96.78999994999981
+    }
+  ],
+  "total_stocks": 20,
+  "total_value": 190616.67,
+  "source": "ib_insync"
+}

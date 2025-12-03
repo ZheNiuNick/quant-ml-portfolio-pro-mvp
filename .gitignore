@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+.venv/
+env/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Build and cache
+.mypy_cache/
+pytest_cache/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+
+# ================================
+# 🚫 LARGE DATA / LOCAL ONLY
+# ================================
+data/factors/*
+data/processed/*
+duckdb/*
+*.parquet
+*.duckdb
+*.pkl
+*.cbm
+*.model
+*.h5
+
+# Keep small output parquet (if needed)
+!outputs/ibkr_data/*.json
+!outputs/portfolios/*.parquet
+!outputs/reports/*.json
+
+
+
+# ================================
+# 🚫 QUARTO BUILD OUTPUT
+# ================================
+zhe_trading_strategy/_site/
+zhe_trading_strategy/site_libs/
+
+# ================================
+# ALLOW ONLY THE CORE WEBSITE
+# ================================
+!zhe_trading_strategy/app.py
+!zhe_trading_strategy/config.py
+!zhe_trading_strategy/index.qmd
+!zhe_trading_strategy/index.html
+!zhe_trading_strategy/requirements.txt
+!zhe_trading_strategy/Procfile
+!zhe_trading_strategy/runtime.txt
+!zhe_trading_strategy/CNAME
+!zhe_trading_strategy/static/
+!zhe_trading_strategy/templates/

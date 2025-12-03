@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Backtest Results - Quantitative Trading Strategy Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-danger text-white">
+                <h2 class="mb-0"><i class="fas fa-chart-line me-2"></i>Backtest Results</h2>
+            </div>
+            <div class="card-body">
+                <!-- Key Metrics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Total Return</h5>
+                                <h3 class="text-success" id="total-return">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Annual Return</h5>
+                                <h3 class="text-info" id="annual-return">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Sharpe Ratio</h5>
+                                <h3 class="text-primary" id="sharpe">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Max Drawdown</h5>
+                                <h3 class="text-danger" id="max-dd">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Return Curve -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Strategy vs Benchmark Return Curve</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="returns-chart" style="height: 500px;"></div>
+                    </div>
+                </div>
+
+                <!-- Drawdown Curve -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Drawdown Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="drawdown-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+
+                <!-- Monthly Returns -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Monthly Return Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="monthly-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Load performance data
+    function loadPerformanceData() {
+        // Show loading status
+        ['total-return', 'annual-return', 'sharpe', 'max-dd'].forEach(id => {
+            document.getElementById(id).textContent = 'Loading...';
+        });
+        
+        const url = API_BASE_URL ? `${API_BASE_URL}/api/performance/real-time` : '/api/performance/real-time';
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    ['total-return', 'annual-return', 'sharpe', 'max-dd'].forEach(id => {
+                        document.getElementById(id).innerHTML = 
+                            '<span class="text-danger">Failed to load data, please check backend service</span>';
+                    });
+                    
+                    // Show error message
+                    const chartDiv = document.getElementById('returns-chart');
+                    chartDiv.innerHTML = 
+                        '<div class="alert alert-warning text-center mt-5">' +
+                        '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                        (data.error === "No data available" ? "No data available" : "Failed to load data, please check backend service") + '</div>';
+                    return;
+                }
+
+                // Update key metrics - use new metrics field
+                const metrics = data.metrics || {};
+                const summary = data.summary || {};
+                
+                // Total Return: use summary.total_return or calculate from nav
+                let totalReturn = summary.total_return;
+                if (!totalReturn && data.nav && data.nav.length > 0) {
+                    const firstNav = data.nav[0];
+                    const lastNav = data.nav[data.nav.length - 1];
+                    if (firstNav && lastNav && firstNav > 0) {
+                        totalReturn = (lastNav / firstNav - 1);
+                    }
+                }
+                document.getElementById('total-return').textContent = 
+                    totalReturn ? 
+                    (totalReturn * 100).toFixed(2) + '%' : 'No data available';
+                
+                document.getElementById('annual-return').textContent = 
+                    metrics.annual_return ? 
+                    (metrics.annual_return * 100).toFixed(2) + '%' : 'No data available';
+                document.getElementById('sharpe').textContent = 
+                    metrics.sharpe ? 
+                    metrics.sharpe.toFixed(2) : 'No data available';
+                document.getElementById('max-dd').textContent = 
+                    metrics.max_drawdown ? 
+                    (Math.abs(metrics.max_drawdown) * 100).toFixed(2) + '%' : 'No data available';
+
+                // Draw return curve - use nav field
+                if (data.dates && data.dates.length > 0 && data.nav && data.nav.length > 0) {
+                    renderReturnsChart(data);
+                    renderDrawdownChart(data);
+                } else if (data.dates && data.dates.length > 0 && data.strategy_returns && data.strategy_returns.length > 0) {
+                    // Fallback to using strategy_returns
+                    renderReturnsChart(data);
+                    renderDrawdownChart(data);
+                } else {
+                    const chartDiv = document.getElementById('returns-chart');
+                    chartDiv.innerHTML = 
+                        '<div class="alert alert-info text-center mt-5">No data available</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading performance:', error);
+                ['total-return', 'annual-return', 'sharpe', 'max-dd'].forEach(id => {
+                    document.getElementById(id).innerHTML = 
+                        '<span class="text-danger">Failed to load data, please check backend service</span>';
+                });
+                
+                const chartDiv = document.getElementById('returns-chart');
+                chartDiv.innerHTML = 
+                    '<div class="alert alert-danger text-center mt-5">' +
+                    '<i class="fas fa-times-circle me-2"></i>Failed to load data, please check backend service</div>';
+            });
+
+        // Load monthly data
+        const monthlyUrl = API_BASE_URL ? `${API_BASE_URL}/api/performance/monthly` : '/api/performance/monthly';
+        fetch(monthlyUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    if (data.error !== "No data available") {
+                        console.error('Error loading monthly data:', data.error);
+                    }
+                    return;
+                }
+                if (data.data && data.data.length > 0) {
+                    renderMonthlyChart(data.data);
+                }
+            })
+            .catch(error => console.error('Error loading monthly data:', error));
+    }
+
+    function renderReturnsChart(data) {
+        // Prioritize nav field, otherwise use strategy_returns
+        const strategyNav = data.nav || (data.strategy_returns ? data.strategy_returns.map(r => r * 100) : []);
+        const benchmarkNav = data.benchmark_nav || (data.benchmark_returns ? data.benchmark_returns.map(r => r * 100) : []);
+        
+        if (!strategyNav || strategyNav.length === 0) {
+            document.getElementById('returns-chart').innerHTML = 
+                '<div class="alert alert-info text-center mt-5">No data available</div>';
+            return;
+        }
+        
+        const trace1 = {
+            x: data.dates,
+            y: strategyNav,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Strategy Return',
+            line: { color: '#2E86AB', width: 2 }
+        };
+        
+        const traces = [trace1];
+        
+        if (benchmarkNav && benchmarkNav.length > 0) {
+            traces.push({
+                x: data.dates,
+                y: benchmarkNav,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Benchmark Return (S&P500)',
+                line: { color: '#A23B72', width: 2, dash: 'dash' }
+            });
+        }
+        
+        const layout = {
+            title: 'Total Return Curve',
+            xaxis: { title: 'Date' },
+            yaxis: { title: 'Total Return (%)' },
+            hovermode: 'x unified',
+            height: 500
+        };
+        Plotly.newPlot('returns-chart', traces, layout);
+    }
+
+    function renderDrawdownChart(data) {
+        const trace = {
+            x: data.dates,
+            y: data.drawdown,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozeroy',
+            name: 'Drawdown',
+            line: { color: '#A23B72' },
+            fillcolor: 'rgba(162, 59, 114, 0.3)'
+        };
+        const layout = {
+            title: 'Drawdown Curve',
+            xaxis: { title: 'Date' },
+            yaxis: { title: 'Drawdown (%)' },
+            height: 400
+        };
+        Plotly.newPlot('drawdown-chart', [trace], layout);
+    }
+
+    function renderMonthlyChart(monthlyData) {
+        const months = monthlyData.map(d => d.month || d.date);
+        const returns = monthlyData.map(d => (d.return || d.monthly_return || 0) * 100);
+        
+        const colors = returns.map(r => r > 0 ? '#2E86AB' : '#A23B72');
+        
+        const trace = {
+            x: months,
+            y: returns,
+            type: 'bar',
+            marker: { color: colors },
+            name: 'Monthly Returns'
+        };
+        const layout = {
+            title: 'Monthly Returns Distribution',
+            xaxis: { title: 'Month' },
+            yaxis: { title: 'Return (%)' },
+            height: 400
+        };
+        Plotly.newPlot('monthly-chart', [trace], layout);
+    }
+
+    // Auto-load on page load
+    window.addEventListener('DOMContentLoaded', loadPerformanceData);
+</script>
+{% endblock %}
+

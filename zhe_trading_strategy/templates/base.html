@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quantitative Trading Strategy Dashboard{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Plotly.js (using latest stable version) -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>Quantitative Trading Strategy
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Project Overview</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/workflow">Workflow</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/factor-diagnostics">Factor Diagnostics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/backtest-results">Backtest Results</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/positions">Positions</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blotter">Blotter</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container-fluid mt-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light text-center py-3 mt-5">
+        <div class="container">
+            <p class="text-muted mb-0">
+                <i class="fas fa-code me-2"></i>
+                Quantitative Trading Strategy Dashboard | 
+                <span id="current-year"></span>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        
+        // Unified API base URL
+        const API_BASE_URL = '{{ api_base_url or "" }}';
+        
+        // API call helper function
+        function apiCall(endpoint) {
+            const url = API_BASE_URL ? `${API_BASE_URL}${endpoint}` : endpoint;
+            return fetch(url).then(response => response.json());
+        }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+

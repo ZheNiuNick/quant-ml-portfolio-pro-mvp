@@ -1,0 +1,173 @@
+{
+  "timestamp": "20251203_151611",
+  "source": "ib_insync",
+  "realized_pnl": 576.52,
+  "unrealized_pnl": 2058.51,
+  "total_pnl": 0.0,
+  "net_liquidation": 1014696.29,
+  "buying_power": 3847886.7,
+  "cash": 821204.06,
+  "positions_pnl": [
+    {
+      "symbol": "NOW",
+      "shares": 12.0,
+      "avg_cost": 822.98090835,
+      "current_price": 829.13,
+      "unrealized_pnl": 73.78909979999935,
+      "value": 9949.56
+    },
+    {
+      "symbol": "MCK",
+      "shares": 11.0,
+      "avg_cost": 806.1309091,
+      "current_price": 806.13,
+      "unrealized_pnl": -0.010000100000638668,
+      "value": 8867.43
+    },
+    {
+      "symbol": "T",
+      "shares": 377.0,
+      "avg_cost": 25.505,
+      "current_price": 25.43,
+      "unrealized_pnl": -28.274999999999732,
+      "value": 9587.11
+    },
+    {
+      "symbol": "ORCL",
+      "shares": 47.0,
+      "avg_cost": 201.29083405,
+      "current_price": 207.63,
+      "unrealized_pnl": 297.94079964999975,
+      "value": 9758.61
+    },
+    {
+      "symbol": "PANW",
+      "shares": 50.0,
+      "avg_cost": 187.93923,
+      "current_price": 192.88,
+      "unrealized_pnl": 247.03849999999932,
+      "value": 9644.0
+    },
+    {
+      "symbol": "MU",
+      "shares": 41.0,
+      "avg_cost": 240.38317075,
+      "current_price": 234.02,
+      "unrealized_pnl": -260.8900007499998,
+      "value": 9594.82
+    },
+    {
+      "symbol": "NVDA",
+      "shares": 53.0,
+      "avg_cost": 181.12792455,
+      "current_price": 180.81,
+      "unrealized_pnl": -16.850001149999287,
+      "value": 9582.93
+    },
+    {
+      "symbol": "DE",
+      "shares": 20.0,
+      "avg_cost": 477.53,
+      "current_price": 480.33,
+      "unrealized_pnl": 56.00000000000023,
+      "value": 9606.6
+    },
+    {
+      "symbol": "ABBV",
+      "shares": 41.0,
+      "avg_cost": 229.40439025,
+      "current_price": 230.45,
+      "unrealized_pnl": 42.869999749999295,
+      "value": 9448.449999999999
+    },
+    {
+      "symbol": "PLTR",
+      "shares": 56.0,
+      "avg_cost": 164.63733035,
+      "current_price": 175.16,
+      "unrealized_pnl": 589.2695003999991,
+      "value": 9808.96
+    },
+    {
+      "symbol": "CAT",
+      "shares": 17.0,
+      "avg_cost": 568.7525,
+      "current_price": 590.15,
+      "unrealized_pnl": 363.7574999999987,
+      "value": 10032.55
+    },
+    {
+      "symbol": "UBER",
+      "shares": 106.0,
+      "avg_cost": 86.69884955,
+      "current_price": 90.67,
+      "unrealized_pnl": 420.94194769999956,
+      "value": 9611.02
+    },
+    {
+      "symbol": "ANET",
+      "shares": 75.0,
+      "avg_cost": 127.80333335,
+      "current_price": 128.45,
+      "unrealized_pnl": 48.49999874999895,
+      "value": 9633.75
+    },
+    {
+      "symbol": "ETN",
+      "shares": 28.0,
+      "avg_cost": 340.5357143,
+      "current_price": 335.4,
+      "unrealized_pnl": -143.8000004000005,
+      "value": 9391.199999999999
+    },
+    {
+      "symbol": "TMO",
+      "shares": 16.0,
+      "avg_cost": 586.2125,
+      "current_price": 585.51,
+      "unrealized_pnl": -11.239999999999782,
+      "value": 9368.16
+    },
+    {
+      "symbol": "CRWD",
+      "shares": 19.0,
+      "avg_cost": 507.7726316,
+      "current_price": 517.21,
+      "unrealized_pnl": 179.30999960000048,
+      "value": 9826.990000000002
+    },
+    {
+      "symbol": "INTU",
+      "shares": 15.0,
+      "avg_cost": 631.24666665,
+      "current_price": 646.51,
+      "unrealized_pnl": 228.95000025000058,
+      "value": 9697.65
+    },
+    {
+      "symbol": "IBM",
+      "shares": 31.0,
+      "avg_cost": 306.0612484,
+      "current_price": 302.98,
+      "unrealized_pnl": -95.51870039999977,
+      "value": 9392.380000000001
+    },
+    {
+      "symbol": "AAPL",
+      "shares": 33.0,
+      "avg_cost": 285.89030305,
+      "current_price": 284.72,
+      "unrealized_pnl": -38.6200006499991,
+      "value": 9395.76
+    },
+    {
+      "symbol": "KLAC",
+      "shares": 7.0,
+      "avg_cost": 1192.33285715,
+      "current_price": 1206.25,
+      "unrealized_pnl": 97.41999994999924,
+      "value": 8443.75
+    }
+  ],
+  "daily_pnl": []
+}
