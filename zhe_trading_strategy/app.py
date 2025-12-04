@@ -924,7 +924,27 @@ def long_short_performance():
                 "stats": {}
             }), 200
         
-        factor_store = pd.read_parquet(factor_store_path)
+        print(f"[DEBUG] long-short API - 开始读取 factor_store.parquet")
+        try:
+            factor_store = pd.read_parquet(factor_store_path)
+            print(f"[DEBUG] long-short API - 读取成功，shape: {factor_store.shape}")
+        except Exception as e:
+            print(f"[ERROR] long-short API - 读取 Parquet 文件失败: {e}")
+            print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
+            # 删除损坏的文件
+            if factor_store_path.exists():
+                factor_store_path.unlink()
+            # 尝试重新下载
+            try:
+                from src.data_loader import ensure_factor_store
+                if ensure_factor_store(factor_store_path, auto_download=True):
+                    factor_store = pd.read_parquet(factor_store_path)
+                    print(f"[INFO] 重新下载并读取成功")
+                else:
+                    raise Exception("重新下载失败")
+            except Exception as e2:
+                print(f"[ERROR] 重新下载也失败: {e2}")
+                raise e
         if not isinstance(factor_store.index, pd.MultiIndex):
             if "date" in factor_store.columns and "ticker" in factor_store.columns:
                 factor_store["date"] = pd.to_datetime(factor_store["date"])
@@ -1196,6 +1216,10 @@ def factor_correlation():
         if not factor_store_path.is_absolute():
             factor_store_path = project_root / factor_store_path
         
+        print(f"[DEBUG] correlation API - factor_store_path: {factor_store_path}")
+        print(f"[DEBUG] correlation API - file exists: {factor_store_path.exists()}")
+        print(f"[DEBUG] correlation API - project_root: {project_root}")
+        
         # 尝试自动从 Hugging Face 下载（如果文件不存在）
         if not factor_store_path.exists():
             print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
@@ -1219,13 +1243,34 @@ def factor_correlation():
                 traceback.print_exc()
         
         if not factor_store_path.exists():
+            print(f"[ERROR] correlation API - factor_store.parquet 不存在: {factor_store_path}")
             return jsonify({
                 "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
                 "factors": [],
                 "correlation_matrix": []
             }), 200
         
-        factor_store = pd.read_parquet(factor_store_path)
+        print(f"[DEBUG] correlation API - 开始读取 factor_store.parquet")
+        try:
+            factor_store = pd.read_parquet(factor_store_path)
+            print(f"[DEBUG] correlation API - 读取成功，shape: {factor_store.shape}")
+        except Exception as e:
+            print(f"[ERROR] correlation API - 读取 Parquet 文件失败: {e}")
+            print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
+            # 删除损坏的文件
+            if factor_store_path.exists():
+                factor_store_path.unlink()
+            # 尝试重新下载
+            try:
+                from src.data_loader import ensure_factor_store
+                if ensure_factor_store(factor_store_path, auto_download=True):
+                    factor_store = pd.read_parquet(factor_store_path)
+                    print(f"[INFO] 重新下载并读取成功")
+                else:
+                    raise Exception("重新下载失败")
+            except Exception as e2:
+                print(f"[ERROR] 重新下载也失败: {e2}")
+                raise e
         if not isinstance(factor_store.index, pd.MultiIndex):
             if "date" in factor_store.columns and "ticker" in factor_store.columns:
                 factor_store["date"] = pd.to_datetime(factor_store["date"])
@@ -1293,6 +1338,10 @@ def risk_exposure():
         if not factor_store_path.is_absolute():
             factor_store_path = project_root / factor_store_path
         
+        print(f"[DEBUG] risk-exposure API - factor_store_path: {factor_store_path}")
+        print(f"[DEBUG] risk-exposure API - file exists: {factor_store_path.exists()}")
+        print(f"[DEBUG] risk-exposure API - project_root: {project_root}")
+        
         # 尝试自动从 Hugging Face 下载（如果文件不存在）
         if not factor_store_path.exists():
             print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
@@ -1317,6 +1366,7 @@ def risk_exposure():
                 traceback.print_exc()
         
         if not factor_store_path.exists():
+            print(f"[ERROR] risk-exposure API - factor_store.parquet 不存在: {factor_store_path}")
             return jsonify({
                 "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
                 "factors": [],
@@ -1324,7 +1374,27 @@ def risk_exposure():
                 "risk_contributions": []
             }), 200
         
-        factor_store = pd.read_parquet(factor_store_path)
+        print(f"[DEBUG] risk-exposure API - 开始读取 factor_store.parquet")
+        try:
+            factor_store = pd.read_parquet(factor_store_path)
+            print(f"[DEBUG] risk-exposure API - 读取成功，shape: {factor_store.shape}")
+        except Exception as e:
+            print(f"[ERROR] risk-exposure API - 读取 Parquet 文件失败: {e}")
+            print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
+            # 删除损坏的文件
+            if factor_store_path.exists():
+                factor_store_path.unlink()
+            # 尝试重新下载
+            try:
+                from src.data_loader import ensure_factor_store
+                if ensure_factor_store(factor_store_path, auto_download=True):
+                    factor_store = pd.read_parquet(factor_store_path)
+                    print(f"[INFO] 重新下载并读取成功")
+                else:
+                    raise Exception("重新下载失败")
+            except Exception as e2:
+                print(f"[ERROR] 重新下载也失败: {e2}")
+                raise e
         if not isinstance(factor_store.index, pd.MultiIndex):
             if "date" in factor_store.columns and "ticker" in factor_store.columns:
                 factor_store["date"] = pd.to_datetime(factor_store["date"])
