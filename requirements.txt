@@ -12,8 +12,9 @@ plotly>=5.22.0
 streamlit>=1.37.0
 tqdm>=4.66.1
 python-dotenv>=1.0.1
+pyyaml
 # Optional:
-# shap>=0.44.1
-# ib_insync>=0.9.86
-# vectorbt>=0.26.1
-# pyqlib
+shap>=0.44.1
+ib_insync>=0.9.86
+vectorbt>=0.26.1
+pyqlib
