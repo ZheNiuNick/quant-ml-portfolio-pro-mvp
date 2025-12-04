@@ -903,13 +903,33 @@ def long_short_performance():
             }), 200
         
         result = data[factor_name]
+        
+        # 转换 stats 结构：从嵌套结构转换为扁平结构
+        # 预计算格式: {"long": {...}, "short": {...}, "long_short": {...}}
+        # 前端期望: {"long_annual_return": ..., "short_annual_return": ..., ...}
+        stats_flat = {}
+        if "stats" in result:
+            stats = result["stats"]
+            if "long" in stats:
+                stats_flat["long_annual_return"] = stats["long"].get("annual_return", 0.0)
+                stats_flat["long_sharpe"] = stats["long"].get("sharpe", 0.0)
+                stats_flat["long_max_dd"] = stats["long"].get("max_dd", 0.0)
+            if "short" in stats:
+                stats_flat["short_annual_return"] = stats["short"].get("annual_return", 0.0)
+                stats_flat["short_sharpe"] = stats["short"].get("sharpe", 0.0)
+                stats_flat["short_max_dd"] = stats["short"].get("max_dd", 0.0)
+            if "long_short" in stats:
+                stats_flat["long_short_annual_return"] = stats["long_short"].get("annual_return", 0.0)
+                stats_flat["long_short_sharpe"] = stats["long_short"].get("sharpe", 0.0)
+                stats_flat["long_short_max_dd"] = stats["long_short"].get("max_dd", 0.0)
+        
         return jsonify({
             "error": None,
             "dates": result["dates"],
             "long_returns": result["long_returns"],
             "short_returns": result["short_returns"],
             "long_short_returns": result["long_short_returns"],
-            "stats": result["stats"]
+            "stats": stats_flat
         })
     except Exception as e:
         import traceback
