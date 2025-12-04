@@ -9,6 +9,7 @@ import json
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+import pytz
 
 import numpy as np
 import pandas as pd
@@ -92,6 +93,50 @@ def get_factor_store_path(factor_cfg=None):
     )
     
     return factor_store_path
+
+
+def convert_to_ny_time(time_str, input_tz='UTC'):
+    """
+    将时间字符串转换为纽约时区
+    
+    Args:
+        time_str: 时间字符串 (格式: "YYYY-MM-DD HH:MM:SS" 或 "YYYY-MM-DD")
+        input_tz: 输入时区，默认 'UTC'
+    
+    Returns:
+        转换后的时间字符串 (纽约时区，格式: "YYYY-MM-DD HH:MM:SS")
+    """
+    if not time_str:
+        return time_str
+    
+    try:
+        # 解析输入时间
+        if len(time_str) == 19:  # "YYYY-MM-DD HH:MM:SS"
+            dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+        elif len(time_str) == 10:  # "YYYY-MM-DD"
+            dt = datetime.strptime(time_str, "%Y-%m-%d")
+        else:
+            return time_str  # 无法解析，返回原值
+        
+        # 设置输入时区
+        if input_tz == 'UTC':
+            input_timezone = pytz.UTC
+        else:
+            input_timezone = pytz.timezone(input_tz)
+        
+        # 如果 datetime 是 naive，先设置为 UTC
+        if dt.tzinfo is None:
+            dt = input_timezone.localize(dt)
+        
+        # 转换到纽约时区
+        ny_tz = pytz.timezone('America/New_York')
+        ny_dt = dt.astimezone(ny_tz)
+        
+        # 返回格式化字符串
+        return ny_dt.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception as e:
+        print(f"[Warn] Failed to convert time to NY timezone: {time_str}, error: {e}")
+        return time_str  # 转换失败，返回原值
 
 
 def load_json_safe(path: Path, default=None):
@@ -580,18 +625,12 @@ def factors_by_date():
 def rolling_ic():
     """近12个月 Rolling IC 曲线"""
     try:
-        # 读取IC/ICIR数据
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
-        
-        ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
+        # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
+        ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
         
         # 调试：打印路径信息
         print(f"[Debug] Looking for factor_ic_ir at: {ic_store_path}")
         print(f"[Debug] File exists: {ic_store_path.exists()}")
-        print(f"[Debug] factor_store_path.parent: {factor_store_path.parent}")
         
         if not ic_store_path.exists():
             return jsonify({
@@ -656,13 +695,8 @@ def rolling_ic():
 def rolling_icir():
     """Rolling ICIR"""
     try:
-        # 读取IC/ICIR数据
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
-        
-        ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
+        # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
+        ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
         
         if not ic_store_path.exists():
             return jsonify({
@@ -724,13 +758,8 @@ def rolling_icir():
 def rolling_tstat():
     """Rolling t-stat (IC / IC_std)"""
     try:
-        # 读取IC/ICIR数据
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
-        
-        ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
+        # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
+        ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
         
         if not ic_store_path.exists():
             return jsonify({
@@ -912,13 +941,8 @@ def long_short_performance():
 def factor_clusters():
     """因子簇分析（Momentum / Quality / Volatility）"""
     try:
-        # 读取IC/ICIR数据
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
-        
-        ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
+        # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
+        ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
         
         if not ic_store_path.exists():
             return jsonify({
@@ -1903,8 +1927,10 @@ def ibkr_trades():
                     commission = float(exec_item.commission) if hasattr(exec_item, 'commission') and exec_item.commission else 0.0
                     
                     if shares > 0 and price > 0:  # 只添加有效的交易
+                        # 转换时间到纽约时区
+                        ny_time = convert_to_ny_time(exec_time, input_tz='UTC') if exec_time else ""
                         trades.append({
-                            "time": exec_time,
+                            "time": ny_time,
                             "symbol": exec_item.contract.symbol,
                             "side": side,
                             "qty": shares,
@@ -1937,8 +1963,10 @@ def ibkr_trades():
                                 price = float(fill.execution.price) if hasattr(fill.execution, 'price') else 0.0
                             
                             if shares > 0 and price > 0:
+                                # 转换时间到纽约时区
+                                ny_time = convert_to_ny_time(exec_time, input_tz='UTC') if exec_time else ""
                                 trades.append({
-                                    "time": exec_time,
+                                    "time": ny_time,
                                     "symbol": trade.contract.symbol,
                                     "side": trade.order.action if hasattr(trade, 'order') and trade.order else "UNKNOWN",
                                     "qty": shares,
@@ -2005,6 +2033,11 @@ def blotter_trades():
                 trades = []
             
             if trades:
+                # 转换所有交易记录的时间到纽约时区
+                for trade in trades:
+                    if trade.get("time"):
+                        trade["time"] = convert_to_ny_time(trade["time"], input_tz='UTC')
+                
                 # 应用筛选
                 if date_from:
                     trades = [t for t in trades if t.get("time", "") >= date_from]
@@ -2031,6 +2064,11 @@ def blotter_trades():
             ibkr_data = ibkr_result.get_json()
             if ibkr_data and not ibkr_data.get("error") and ibkr_data.get("trades"):
                 trades = ibkr_data.get("trades", [])
+                
+                # 转换所有交易记录的时间到纽约时区（ibkr_trades 已经转换，但确保一致性）
+                for trade in trades:
+                    if trade.get("time"):
+                        trade["time"] = convert_to_ny_time(trade["time"], input_tz='UTC')
                 
                 # 应用筛选
                 if date_from:
@@ -2075,8 +2113,10 @@ def blotter_trades():
                     if ticker_filter and symbol.upper() != ticker_filter:
                         continue
                     
+                    # 转换时间到纽约时区（假设文件中的时间是 UTC）
+                    ny_time = convert_to_ny_time(trade_time, input_tz='UTC') if trade_time else ""
                     trades.append({
-                        "time": trade_time,
+                        "time": ny_time,
                         "symbol": symbol,
                         "side": "BUY" if order.get("target_weight", 0) > 0 else "SELL",
                         "qty": 0.0,
@@ -2085,6 +2125,11 @@ def blotter_trades():
                     })
         except:
             continue
+    
+    # 转换所有交易记录的时间到纽约时区
+    for trade in trades:
+        if trade.get("time"):
+            trade["time"] = convert_to_ny_time(trade["time"], input_tz='UTC')
     
     return jsonify({
         "error": None if trades else "暂无数据",

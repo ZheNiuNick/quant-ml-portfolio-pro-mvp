@@ -10,5 +10,6 @@ python-dotenv>=1.0.1
 gunicorn>=21.2.0
 scikit-learn>=1.4.0
 lightgbm>=4.0.0
+pytz>=2024.1
 # huggingface_hub>=0.20.0  # 不再需要，已改用预计算的 JSON 文件
 
