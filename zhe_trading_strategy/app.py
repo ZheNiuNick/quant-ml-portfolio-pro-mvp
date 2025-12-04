@@ -18,9 +18,48 @@ from plotly.subplots import make_subplots
 from flask import Flask, render_template, jsonify, request
 import yaml
 
+# 智能查找项目根目录
+# 项目根目录应该包含 src/ 和 config/ 目录
+def find_project_root():
+    """查找项目根目录（包含 src/ 和 config/ 的目录）"""
+    current = Path(__file__).resolve()
+    
+    # 尝试从 app.py 的位置向上查找
+    for path in [current.parent.parent, current.parent, Path.cwd()]:
+        if (path / "src").exists() and (path / "config").exists():
+            return path
+    
+    # 如果都找不到，尝试从当前工作目录查找
+    cwd = Path.cwd()
+    if (cwd / "src").exists() and (cwd / "config").exists():
+        return cwd
+    
+    # 如果还是找不到，尝试从 app.py 的父目录的父目录
+    # 这适用于 app.py 在 zhe_trading_strategy/ 目录下的情况
+    app_dir = current.parent
+    parent = app_dir.parent
+    if (parent / "src").exists() and (parent / "config").exists():
+        return parent
+    
+    # 最后尝试：如果当前目录就是项目根
+    if (current / "src").exists() and (current / "config").exists():
+        return current
+    
+    # 如果都找不到，返回 app.py 的父目录的父目录（默认行为）
+    return app_dir.parent
+
 # 添加项目根目录到路径
-project_root = Path(__file__).parent.parent
+project_root = find_project_root()
 sys.path.insert(0, str(project_root))
+
+# 验证项目根目录
+if not (project_root / "src").exists():
+    raise ImportError(
+        f"无法找到项目根目录。当前工作目录: {Path.cwd()}, "
+        f"app.py 位置: {Path(__file__).resolve()}, "
+        f"尝试的项目根: {project_root}. "
+        f"请确保 src/ 目录存在。"
+    )
 
 # 导入 src 模块的真实函数
 from src.backtest import load_settings, risk_analysis
@@ -34,6 +73,11 @@ app.config['JSON_AS_ASCII'] = False
 
 # 加载配置
 SETTINGS = project_root / "config" / "settings.yaml"
+if not SETTINGS.exists():
+    raise FileNotFoundError(
+        f"无法找到配置文件: {SETTINGS}. "
+        f"项目根目录: {project_root}"
+    )
 cfg = load_settings(str(SETTINGS))
 
 # 导入 Dashboard 配置
