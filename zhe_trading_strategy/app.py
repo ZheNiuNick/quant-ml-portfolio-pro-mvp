@@ -64,9 +64,18 @@ if not (project_root / "src").exists():
 # 导入 src 模块的真实函数
 from src.backtest import load_settings, risk_analysis
 from src.factor_engine import read_prices, load_settings as load_factor_settings, daily_rank_ic, forward_return
-from src.ibkr_live_trader import IBKRLiveTrader
 from src.optimizer import load_predictions
 from src.modeling import rank_ic_per_day
+
+# 可选导入 IBKRLiveTrader（需要 ib_insync，这是可选依赖）
+try:
+    from src.ibkr_live_trader import IBKRLiveTrader
+    IBKR_AVAILABLE = True
+except ImportError as e:
+    IBKRLiveTrader = None
+    IBKR_AVAILABLE = False
+    print(f"[WARN] IBKR Live Trader not available: {e}")
+    print("[WARN] IBKR features will be disabled. Install ib_insync to enable: pip install ib_insync")
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
@@ -1587,6 +1596,14 @@ def ibkr_positions():
             "source": "backtest"
         }), 200
     
+    if not IBKR_AVAILABLE:
+        return jsonify({
+            "error": "IBKR 功能不可用：ib_insync 未安装",
+            "message": "请安装 ib_insync: pip install ib_insync",
+            "positions": [],
+            "source": "error"
+        }), 503
+    
     try:
         # 使用 src/ibkr_live_trader.py 的真实类
         trader = IBKRLiveTrader(
@@ -2000,6 +2017,13 @@ def ibkr_trades():
             "trades": []
         }), 200
     
+    if not IBKR_AVAILABLE:
+        return jsonify({
+            "error": "IBKR 功能不可用：ib_insync 未安装",
+            "message": "请安装 ib_insync: pip install ib_insync",
+            "trades": []
+        }), 503
+    
     try:
         # 使用 src/ibkr_live_trader.py 的真实类
         trader = IBKRLiveTrader(
@@ -2252,6 +2276,16 @@ def ibkr_pnl():
             "total_pnl": 0.0,
             "daily_pnl": []
         }), 200
+    
+    if not IBKR_AVAILABLE:
+        return jsonify({
+            "error": "IBKR 功能不可用：ib_insync 未安装",
+            "message": "请安装 ib_insync: pip install ib_insync",
+            "realized_pnl": 0.0,
+            "unrealized_pnl": 0.0,
+            "total_pnl": 0.0,
+            "daily_pnl": []
+        }), 503
     
     try:
         # 使用 src/ibkr_live_trader.py 的真实类
