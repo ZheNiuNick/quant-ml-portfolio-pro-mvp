@@ -891,11 +891,15 @@ def long_short_performance():
         
         # 尝试自动从 Hugging Face 下载（如果文件不存在）
         if not factor_store_path.exists():
+            print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
             try:
                 from src.data_loader import ensure_factor_store
-                if not ensure_factor_store(factor_store_path, auto_download=True):
+                print(f"[DEBUG] 开始尝试从 Hugging Face 下载 factor_store.parquet...")
+                download_success = ensure_factor_store(factor_store_path, auto_download=True)
+                print(f"[DEBUG] 下载结果: {download_success}, 文件存在: {factor_store_path.exists()}")
+                if not download_success or not factor_store_path.exists():
                     return jsonify({
-                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
+                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...（如果持续失败，请检查文件是否已上传到 Hugging Face）",
                         "dates": [],
                         "long_returns": [],
                         "short_returns": [],
@@ -903,8 +907,12 @@ def long_short_performance():
                         "stats": {},
                         "downloading": True
                     }), 200
-            except ImportError:
-                pass
+            except ImportError as e:
+                print(f"[ERROR] 无法导入 data_loader: {e}")
+            except Exception as e:
+                print(f"[ERROR] 下载 factor_store.parquet 时出错: {e}")
+                import traceback
+                traceback.print_exc()
         
         if not factor_store_path.exists():
             return jsonify({
@@ -1190,17 +1198,25 @@ def factor_correlation():
         
         # 尝试自动从 Hugging Face 下载（如果文件不存在）
         if not factor_store_path.exists():
+            print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
             try:
                 from src.data_loader import ensure_factor_store
-                if not ensure_factor_store(factor_store_path, auto_download=True):
+                print(f"[DEBUG] 开始尝试从 Hugging Face 下载 factor_store.parquet...")
+                download_success = ensure_factor_store(factor_store_path, auto_download=True)
+                print(f"[DEBUG] 下载结果: {download_success}, 文件存在: {factor_store_path.exists()}")
+                if not download_success or not factor_store_path.exists():
                     return jsonify({
-                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
+                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...（如果持续失败，请检查文件是否已上传到 Hugging Face）",
                         "factors": [],
                         "correlation_matrix": [],
                         "downloading": True
                     }), 200
-            except ImportError:
-                pass
+            except ImportError as e:
+                print(f"[ERROR] 无法导入 data_loader: {e}")
+            except Exception as e:
+                print(f"[ERROR] 下载 factor_store.parquet 时出错: {e}")
+                import traceback
+                traceback.print_exc()
         
         if not factor_store_path.exists():
             return jsonify({
@@ -1279,18 +1295,26 @@ def risk_exposure():
         
         # 尝试自动从 Hugging Face 下载（如果文件不存在）
         if not factor_store_path.exists():
+            print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
             try:
                 from src.data_loader import ensure_factor_store
-                if not ensure_factor_store(factor_store_path, auto_download=True):
+                print(f"[DEBUG] 开始尝试从 Hugging Face 下载 factor_store.parquet...")
+                download_success = ensure_factor_store(factor_store_path, auto_download=True)
+                print(f"[DEBUG] 下载结果: {download_success}, 文件存在: {factor_store_path.exists()}")
+                if not download_success or not factor_store_path.exists():
                     return jsonify({
-                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
+                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...（如果持续失败，请检查文件是否已上传到 Hugging Face）",
                         "factors": [],
                         "exposures": [],
                         "risk_contributions": [],
                         "downloading": True
                     }), 200
-            except ImportError:
-                pass
+            except ImportError as e:
+                print(f"[ERROR] 无法导入 data_loader: {e}")
+            except Exception as e:
+                print(f"[ERROR] 下载 factor_store.parquet 时出错: {e}")
+                import traceback
+                traceback.print_exc()
         
         if not factor_store_path.exists():
             return jsonify({

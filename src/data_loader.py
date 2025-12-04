@@ -37,44 +37,68 @@ def download_from_hf(
     """
     # 如果文件已存在且不需要强制下载，直接返回
     if local_path.exists() and not force_download:
-        logger.info(f"文件已存在，跳过下载: {local_path}")
+        print(f"[INFO] 文件已存在，跳过下载: {local_path}")
         return True
     
     try:
         from huggingface_hub import hf_hub_download
         
-        logger.info(f"开始从 Hugging Face 下载: {filename}")
-        logger.info(f"  数据集: {repo_id}")
-        logger.info(f"  保存到: {local_path}")
+        print(f"[INFO] 开始从 Hugging Face 下载: {filename}")
+        print(f"[INFO]   数据集: {repo_id}")
+        print(f"[INFO]   保存到: {local_path}")
         
         # 确保目录存在
         local_path.parent.mkdir(parents=True, exist_ok=True)
         
         # 下载文件
+        # hf_hub_download 会将文件下载到 local_dir/filename，保留目录结构
+        # 例如：filename="data/factors/factor_store.parquet" 会下载到 local_dir/data/factors/factor_store.parquet
+        # 我们需要将 local_dir 设置为项目根目录，然后文件会自动保存到正确的位置
+        project_root = local_path.parent.parent.parent if "factors" in str(local_path) else local_path.parent
         downloaded_path = hf_hub_download(
             repo_id=repo_id,
             repo_type="dataset",
             filename=filename,
-            local_dir=local_path.parent,
+            local_dir=str(project_root),
             local_dir_use_symlinks=False,
             force_download=force_download,
         )
         
-        # 如果下载路径与目标路径不同，重命名
-        if Path(downloaded_path) != local_path:
-            Path(downloaded_path).rename(local_path)
+        downloaded_path_obj = Path(downloaded_path)
+        print(f"[INFO] 下载路径: {downloaded_path_obj}")
+        print(f"[INFO] 目标路径: {local_path}")
         
-        logger.info(f"✅ 下载成功: {local_path}")
-        return True
+        # 如果下载路径与目标路径不同，需要移动文件
+        if downloaded_path_obj != local_path:
+            if downloaded_path_obj.exists():
+                # 确保目标目录存在
+                local_path.parent.mkdir(parents=True, exist_ok=True)
+                # 如果目标文件已存在，先删除
+                if local_path.exists():
+                    local_path.unlink()
+                # 移动文件到目标位置
+                downloaded_path_obj.rename(local_path)
+                print(f"[INFO] 文件已移动到: {local_path}")
+            else:
+                print(f"[ERROR] 下载的文件不存在: {downloaded_path_obj}")
+                return False
+        
+        if local_path.exists():
+            file_size = local_path.stat().st_size / (1024 * 1024)  # MB
+            print(f"[INFO] ✅ 下载成功: {local_path} ({file_size:.2f} MB)")
+            return True
+        else:
+            print(f"[ERROR] 下载后文件不存在: {local_path}")
+            return False
         
     except ImportError:
-        logger.warning(
-            "huggingface_hub 未安装，无法从 Hugging Face 下载文件。"
-            "安装方法: pip install huggingface_hub"
-        )
+        print("[WARN] huggingface_hub 未安装，无法从 Hugging Face 下载文件。")
+        print("[WARN] 安装方法: pip install huggingface_hub")
         return False
     except Exception as e:
-        logger.error(f"❌ 下载失败: {e}")
+        print(f"[ERROR] ❌ 下载失败: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -98,11 +122,14 @@ def ensure_factor_store(
     
     # 如果文件不存在且允许自动下载
     if auto_download:
-        logger.info(f"factor_store.parquet 不存在，尝试从 Hugging Face 下载...")
-        return download_from_hf(
+        print(f"[INFO] factor_store.parquet 不存在，尝试从 Hugging Face 下载...")
+        print(f"[INFO] 文件路径: {local_path}")
+        result = download_from_hf(
             filename=HF_DATASET_FILES["factor_store"],
             local_path=local_path,
         )
+        print(f"[INFO] 下载结果: {result}, 文件存在: {local_path.exists()}")
+        return result
     
     return False
 
