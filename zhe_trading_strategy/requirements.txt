@@ -10,4 +10,5 @@ python-dotenv>=1.0.1
 gunicorn>=21.2.0
 scikit-learn>=1.4.0
 lightgbm>=4.0.0
+huggingface_hub>=0.20.0
 

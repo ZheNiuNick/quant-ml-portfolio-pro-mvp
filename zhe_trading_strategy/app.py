@@ -109,6 +109,35 @@ PORTFOLIO_DIR = DATA_DIR / "portfolios"
 REPORTS_DIR = DATA_DIR / "reports"
 
 
+def get_factor_store_path(factor_cfg=None, auto_download=True):
+    """
+    获取 factor_store.parquet 的路径，如果不存在则尝试从 Hugging Face 自动下载
+    
+    Args:
+        factor_cfg: 因子配置（可选）
+        auto_download: 是否自动下载（如果文件不存在）
+    
+    Returns:
+        factor_store.parquet 的路径
+    """
+    if factor_cfg is None:
+        factor_cfg = load_factor_settings(str(SETTINGS))
+    
+    factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
+    if not factor_store_path.is_absolute():
+        factor_store_path = project_root / factor_store_path
+    
+    # 尝试自动从 Hugging Face 下载（如果文件不存在）
+    if auto_download and not factor_store_path.exists():
+        try:
+            from src.data_loader import ensure_factor_store
+            ensure_factor_store(factor_store_path, auto_download=True)
+        except ImportError:
+            pass  # data_loader 模块不存在时忽略
+    
+    return factor_store_path
+
+
 def load_json_safe(path: Path, default=None):
     """安全加载 JSON 文件"""
     if path.exists():
@@ -793,6 +822,19 @@ def factor_diagnostics_factors():
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
             factor_store_path = project_root / factor_store_path
+        
+        # 尝试自动从 Hugging Face 下载（如果文件不存在）
+        if not factor_store_path.exists():
+            try:
+                from src.data_loader import ensure_factor_store
+                if not ensure_factor_store(factor_store_path, auto_download=True):
+                    return jsonify({
+                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
+                        "factors": [],
+                        "downloading": True
+                    }), 200
+            except ImportError:
+                pass
         
         if not factor_store_path.exists():
             return jsonify({"error": "因子数据不存在", "factors": []}), 200

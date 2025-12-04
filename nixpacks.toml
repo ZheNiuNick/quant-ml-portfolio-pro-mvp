@@ -1,0 +1,17 @@
+# Nixpacks configuration for Railway deployment
+# This ensures Git LFS files are downloaded during build
+
+[phases.setup]
+nixPkgs = ["git-lfs"]
+
+[phases.install]
+cmds = [
+    "git lfs install",
+    "git lfs pull"
+]
+
+[phases.build]
+cmds = [
+    "pip install -r zhe_trading_strategy/requirements.txt"
+]
+
