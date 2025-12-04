@@ -1,14 +1,6 @@
 # Nixpacks configuration for Railway deployment
-# This ensures Git LFS files are downloaded during build
-
-[phases.setup]
-nixPkgs = ["git-lfs"]
-
-[phases.install]
-cmds = [
-    "git lfs install",
-    "git lfs pull"
-]
+# Note: Git LFS files are not downloaded during build
+# Large files (factor_store.parquet) are downloaded from Hugging Face on-demand
 
 [phases.build]
 cmds = [
