@@ -37,10 +37,13 @@ duckdb/*
 *.model
 *.h5
 
-# Keep small output parquet (if needed)
+# Keep small output parquet files (exceptions to *.parquet)
 !outputs/ibkr_data/*.json
 !outputs/portfolios/*.parquet
 !outputs/reports/*.json
+!outputs/backtests/*.json
+!outputs/backtests/*.parquet
+!data/factors/factor_ic_ir.parquet
 
 
 
