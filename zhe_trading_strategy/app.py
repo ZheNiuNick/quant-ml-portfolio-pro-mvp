@@ -171,8 +171,15 @@ def load_parquet_safe(path: Path):
     if path.exists():
         try:
             return pd.read_parquet(path)
-        except:
+        except Exception as e:
+            print(f"[Error] Failed to load parquet file {path}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
+    else:
+        print(f"[Warn] Parquet file does not exist: {path}")
+        print(f"  Current working directory: {Path.cwd()}")
+        print(f"  Project root: {project_root}")
     return None
 
 
@@ -625,9 +632,14 @@ def rolling_ic():
         
         ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
         
+        # 调试：打印路径信息
+        print(f"[Debug] Looking for factor_ic_ir at: {ic_store_path}")
+        print(f"[Debug] File exists: {ic_store_path.exists()}")
+        print(f"[Debug] factor_store_path.parent: {factor_store_path.parent}")
+        
         if not ic_store_path.exists():
             return jsonify({
-                "error": "IC数据不存在，请先运行因子IC计算",
+                "error": f"IC数据不存在: {ic_store_path}，请先运行因子IC计算",
                 "dates": [],
                 "ic_mean": [],
                 "ic_upper": [],
@@ -876,6 +888,33 @@ def long_short_performance():
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
             factor_store_path = project_root / factor_store_path
+        
+        # 尝试自动从 Hugging Face 下载（如果文件不存在）
+        if not factor_store_path.exists():
+            try:
+                from src.data_loader import ensure_factor_store
+                if not ensure_factor_store(factor_store_path, auto_download=True):
+                    return jsonify({
+                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
+                        "dates": [],
+                        "long_returns": [],
+                        "short_returns": [],
+                        "long_short_returns": [],
+                        "stats": {},
+                        "downloading": True
+                    }), 200
+            except ImportError:
+                pass
+        
+        if not factor_store_path.exists():
+            return jsonify({
+                "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
+                "dates": [],
+                "long_returns": [],
+                "short_returns": [],
+                "long_short_returns": [],
+                "stats": {}
+            }), 200
         
         factor_store = pd.read_parquet(factor_store_path)
         if not isinstance(factor_store.index, pd.MultiIndex):
@@ -1149,9 +1188,23 @@ def factor_correlation():
         if not factor_store_path.is_absolute():
             factor_store_path = project_root / factor_store_path
         
+        # 尝试自动从 Hugging Face 下载（如果文件不存在）
+        if not factor_store_path.exists():
+            try:
+                from src.data_loader import ensure_factor_store
+                if not ensure_factor_store(factor_store_path, auto_download=True):
+                    return jsonify({
+                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
+                        "factors": [],
+                        "correlation_matrix": [],
+                        "downloading": True
+                    }), 200
+            except ImportError:
+                pass
+        
         if not factor_store_path.exists():
             return jsonify({
-                "error": "因子数据不存在",
+                "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
                 "factors": [],
                 "correlation_matrix": []
             }), 200
@@ -1224,9 +1277,24 @@ def risk_exposure():
         if not factor_store_path.is_absolute():
             factor_store_path = project_root / factor_store_path
         
+        # 尝试自动从 Hugging Face 下载（如果文件不存在）
+        if not factor_store_path.exists():
+            try:
+                from src.data_loader import ensure_factor_store
+                if not ensure_factor_store(factor_store_path, auto_download=True):
+                    return jsonify({
+                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
+                        "factors": [],
+                        "exposures": [],
+                        "risk_contributions": [],
+                        "downloading": True
+                    }), 200
+            except ImportError:
+                pass
+        
         if not factor_store_path.exists():
             return jsonify({
-                "error": "因子数据不存在",
+                "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
                 "factors": [],
                 "exposures": [],
                 "risk_contributions": []
@@ -2519,7 +2587,7 @@ def backtest_analysis():
         # 1. 月度收益分析
         monthly_returns = []
         strategy_returns_series = pd.Series(strategy_returns, index=daily_returns.index)
-        monthly_ret = strategy_returns_series.resample('M').apply(lambda x: (1 + x).prod() - 1)
+        monthly_ret = strategy_returns_series.resample('ME').apply(lambda x: (1 + x).prod() - 1)
         
         for date, ret in monthly_ret.items():
             monthly_returns.append({
@@ -2569,7 +2637,7 @@ def backtest_analysis():
         try:
             if 'turnover' in daily_returns.columns:
                 turnover_series = pd.Series(daily_returns['turnover'], index=daily_returns.index)
-                monthly_turnover = turnover_series.resample('M').mean()
+                monthly_turnover = turnover_series.resample('ME').mean()
                 for date, t in monthly_turnover.items():
                     turnover.append({
                         "month": date.strftime("%Y-%m"),
@@ -2762,7 +2830,15 @@ def performance_real_time():
     
     # 回退到回测数据
     backtest_summary = load_json_safe(BACKTEST_DIR / "summary.json", {})
-    daily_returns = load_parquet_safe(BACKTEST_DIR / "daily_returns.parquet")
+    
+    # 调试：打印路径信息
+    daily_returns_path = BACKTEST_DIR / "daily_returns.parquet"
+    print(f"[Debug] Looking for daily_returns at: {daily_returns_path}")
+    print(f"[Debug] File exists: {daily_returns_path.exists()}")
+    print(f"[Debug] BACKTEST_DIR: {BACKTEST_DIR}")
+    print(f"[Debug] Project root: {project_root}")
+    
+    daily_returns = load_parquet_safe(daily_returns_path)
     
     if daily_returns is None:
         return jsonify({
@@ -2953,7 +3029,7 @@ def performance_monthly():
         
         # 计算月度收益
         strategy_returns_series = pd.Series(strategy_returns, index=daily_returns.index)
-        monthly_ret = strategy_returns_series.resample('M').apply(lambda x: (1 + x).prod() - 1)
+        monthly_ret = strategy_returns_series.resample('ME').apply(lambda x: (1 + x).prod() - 1)
         
         monthly_data = []
         for date, ret in monthly_ret.items():
