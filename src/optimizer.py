@@ -21,10 +21,14 @@ import pandas as pd
 import scipy.optimize as so
 import yaml
 
-SETTINGS = "config/settings.yaml"
+# 使用统一的路径管理
+from src.config.path import SETTINGS_FILE, OUTPUT_MODELS_DIR, OUTPUT_PORTFOLIOS_DIR, get_path
+
+SETTINGS = SETTINGS_FILE
 
 
-def load_settings(path=SETTINGS):
+def load_settings(path=SETTINGS_FILE):
+    path = get_path(path) if isinstance(path, str) and not Path(path).is_absolute() else Path(path)
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -434,7 +438,7 @@ def load_predictions(cfg, model_type: str = "lightgbm") -> pd.Series:
     import numpy as np
     
     # 1. 尝试从模型输出目录加载已保存的预测
-    model_dir = Path(cfg["paths"]["model_dir"])
+    model_dir = get_path(cfg["paths"]["model_dir"], OUTPUT_MODELS_DIR)
     specific_pred_file = model_dir / f"{model_type}_predictions.pkl"
     if specific_pred_file.exists():
         import pickle
@@ -1062,7 +1066,7 @@ def run_optimize(cfg):
     weights_df = pd.DataFrame(weights_dict).T.sort_index()
     weights_df.index = pd.to_datetime(weights_df.index)
     
-    output_path = Path(cfg["paths"]["portfolio_path"])
+    output_path = get_path(cfg["paths"]["portfolio_path"], OUTPUT_PORTFOLIOS_DIR)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     weights_df.to_parquet(output_path)
     

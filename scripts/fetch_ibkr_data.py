@@ -25,14 +25,14 @@ import json
 import pandas as pd
 import argparse
 
-# 添加项目根目录到路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+# 使用统一的路径管理
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from src.config.path import OUTPUT_IBKR_DATA_DIR
 from src.ibkr_live_trader import IBKRLiveTrader
 
 # 输出目录
-OUTPUT_DIR = project_root / "outputs" / "ibkr_data"
+OUTPUT_DIR = OUTPUT_IBKR_DATA_DIR
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # IBKR 配置（从环境变量或默认值）

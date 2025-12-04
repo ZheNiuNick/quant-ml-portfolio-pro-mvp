@@ -16,10 +16,14 @@ except ImportError:
     HAS_REQUESTS = False
     print("[WARN] requests not installed. S&P500 list will use fallback method.")
 
-SETTINGS = "config/settings.yaml"
+# 使用统一的路径管理
+from src.config.path import SETTINGS_FILE, DATA_FACTORS_DIR, get_path
 
-def load_settings(path=SETTINGS):
+SETTINGS = SETTINGS_FILE
+
+def load_settings(path=SETTINGS_FILE):
     import yaml
+    path = get_path(path) if isinstance(path, str) and not Path(path).is_absolute() else Path(path)
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -93,7 +97,7 @@ def get_tickers_from_qlib(instruments="csi300", region="cn"):
             print(f"[Warn] Could not read from {instruments_file}: {e}")
     
     # Method 2: Try to extract from existing factor_store (only if region matches)
-    factor_store_path = Path("data/factors/factor_store.parquet")
+    factor_store_path = get_path("data/factors/factor_store.parquet", DATA_FACTORS_DIR)
     if factor_store_path.exists():
         try:
             df = pd.read_parquet(factor_store_path)

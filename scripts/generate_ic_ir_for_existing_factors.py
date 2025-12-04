@@ -19,10 +19,10 @@ warnings.filterwarnings('ignore', category=RuntimeWarning)
 warnings.filterwarnings('ignore', message='.*ConstantInputWarning.*')
 warnings.filterwarnings('ignore', message='.*correlation coefficient is not defined.*')
 
-# 添加项目根目录到路径
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
+# 使用统一的路径管理
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from src.config.path import DATA_FACTORS_DIR, get_path
 from src.factor_engine import read_prices, forward_return, daily_rank_ic, load_settings
 
 def generate_ic_ir_for_existing_factors(cfg, start_date=None, end_date=None):
@@ -32,7 +32,7 @@ def generate_ic_ir_for_existing_factors(cfg, start_date=None, end_date=None):
     print("="*60)
     
     # 读取因子数据
-    factor_store_path = Path(cfg["paths"]["factors_store"])
+    factor_store_path = get_path(cfg["paths"]["factors_store"], DATA_FACTORS_DIR)
     if not factor_store_path.exists():
         print(f"[错误] 因子数据文件不存在: {factor_store_path}")
         return

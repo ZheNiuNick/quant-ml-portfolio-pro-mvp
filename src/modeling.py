@@ -6,13 +6,17 @@ import numpy as np
 import pandas as pd
 import lightgbm as lgb
 
-SETTINGS = "config/settings.yaml"
+# 使用统一的路径管理
+from src.config.path import SETTINGS_FILE, OUTPUT_REPORTS_DIR, OUTPUT_MODELS_DIR, get_path
+
+SETTINGS = SETTINGS_FILE
 
 # ----------------------------
 # Config
 # ----------------------------
-def load_settings(path=SETTINGS):
+def load_settings(path=SETTINGS_FILE):
     import yaml
+    path = get_path(path) if isinstance(path, str) and not Path(path).is_absolute() else Path(path)
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -334,7 +338,7 @@ def prepare_regression_data(cfg, use_qlib_label=False):
         panel = feats.join(panel["y"], how="inner")
     
     # 可选：基于单因子 ICIR 过滤特征（如果 summary 文件存在）
-    summary_path = Path("outputs/reports/single_factor_summary.json")
+    summary_path = OUTPUT_REPORTS_DIR / "single_factor_summary.json"
     if summary_path.exists() and cfg.get("model", {}).get("filter_by_icir", False):
         import json
         with open(summary_path, "r") as f:
@@ -433,7 +437,7 @@ def prepare_panel(cfg, q_bins: int = 20):
         raise ValueError("No features remaining after drop_bad_features. Check factor_store data quality.")
     
     # 可选：基于单因子 ICIR 过滤特征（如果 summary 文件存在）
-    summary_path = Path("outputs/reports/single_factor_summary.json")
+    summary_path = OUTPUT_REPORTS_DIR / "single_factor_summary.json"
     if summary_path.exists() and cfg.get("model", {}).get("filter_by_icir", False):
         import json
         with open(summary_path, "r") as f:
@@ -668,7 +672,7 @@ def train_ranker(cfg):
     # ----------------------------
     # Artifacts
     # ----------------------------
-    out_dir = Path(cfg["paths"].get("model_dir", "outputs"))
+    out_dir = get_path(cfg["paths"].get("model_dir", "outputs/models"), OUTPUT_MODELS_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
     
     # 保存特征列表，供推理阶段对齐
@@ -692,7 +696,7 @@ def train_ranker(cfg):
         order = np.argsort(-gain)[:5]
         top_feats = list(Xfull.columns[order])
 
-    shap_path = Path(cfg["paths"].get("shap_top5_path", "outputs/shap_top5.json"))
+    shap_path = get_path(cfg["paths"].get("shap_top5_path", "outputs/shap_top5.json"))
     with open(shap_path, "w") as f:
         json.dump({"top5_features": top_feats}, f, indent=2)
 
@@ -703,11 +707,11 @@ def train_ranker(cfg):
     roll60 = ric_daily.rolling(60, min_periods=20).mean().rename("rank_ic_roll60")
     rric = pd.concat([ric_daily, roll60], axis=1)
 
-    rric_path = Path(cfg["paths"].get("rolling_rankic_path", "outputs/rolling_rankic.parquet"))
+    rric_path = get_path(cfg["paths"].get("rolling_rankic_path", "outputs/rolling_rankic.parquet"))
     rric.to_parquet(rric_path)
 
     metrics["oof_mean_rank_ic"] = float(ric_daily.mean())
-    metrics_path = Path(cfg["paths"].get("metrics_path", "outputs/metrics.json"))
+    metrics_path = get_path(cfg["paths"].get("metrics_path", "outputs/reports/metrics.json"))
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=2)
 
@@ -843,7 +847,7 @@ def _train_regression_qlib_segments(cfg):
     
     # 关键修复：保存训练集的全局中位数，供预测时使用
     import json
-    model_dir = Path(cfg["paths"]["model_dir"])
+    model_dir = get_path(cfg["paths"]["model_dir"], OUTPUT_MODELS_DIR)
     model_dir.mkdir(parents=True, exist_ok=True)
     train_medians_path = model_dir / "train_global_medians.json"
     train_medians_dict = train_global_medians.to_dict()
@@ -930,7 +934,7 @@ def _train_regression_qlib_segments(cfg):
     }
     
     # 保存模型
-    model_path = Path("outputs/models/lgbm_regression.txt")
+    model_path = OUTPUT_MODELS_DIR / "lgbm_regression.txt"
     model_path.parent.mkdir(parents=True, exist_ok=True)
     model.save_model(str(model_path))
     
@@ -1077,11 +1081,11 @@ def _train_regression_walk_forward(cfg):
         params.update({"objective": "regression", "metric": "rmse", "verbosity": -1})
         params.pop("ndcg_eval_at", None)
         final_model = lgb.train(params, dtrain, num_boost_round=params.get("n_estimators", 2000))
-        model_path = Path("outputs/models/lgbm_regression.txt")
+        model_path = OUTPUT_MODELS_DIR / "lgbm_regression.txt"
         model_path.parent.mkdir(parents=True, exist_ok=True)
         final_model.save_model(str(model_path))
     else:
-        model_path = Path("outputs/models/lgbm_regression.txt")
+        model_path = OUTPUT_MODELS_DIR / "lgbm_regression.txt"
     
     metrics_path = Path(cfg["paths"].get("metrics_path", "outputs/reports/metrics.json"))
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1202,7 +1206,7 @@ def _train_catboost_qlib_segments(cfg):
     
     # 关键修复：保存训练集的全局中位数，供预测时使用
     import json
-    model_dir = Path(cfg["paths"]["model_dir"])
+    model_dir = get_path(cfg["paths"]["model_dir"], OUTPUT_MODELS_DIR)
     model_dir.mkdir(parents=True, exist_ok=True)
     train_medians_path = model_dir / "train_global_medians.json"
     train_medians_dict = train_global_medians.to_dict()
@@ -1254,7 +1258,7 @@ def _train_catboost_qlib_segments(cfg):
         "test_rank_icir": float(rank_icir),
     }
     
-    model_path = Path("outputs/models/catboost_regression.cbm")
+    model_path = OUTPUT_MODELS_DIR / "catboost_regression.cbm"
     model_path.parent.mkdir(parents=True, exist_ok=True)
     model.save_model(str(model_path))
     
@@ -1500,7 +1504,7 @@ def _train_xgboost_qlib_segments(cfg):
     
     # 关键修复：保存训练集的全局中位数，供预测时使用
     import json
-    model_dir = Path(cfg["paths"]["model_dir"])
+    model_dir = get_path(cfg["paths"]["model_dir"], OUTPUT_MODELS_DIR)
     model_dir.mkdir(parents=True, exist_ok=True)
     train_medians_path = model_dir / "train_global_medians.json"
     train_medians_dict = train_global_medians.to_dict()
@@ -1603,7 +1607,7 @@ def _train_xgboost_qlib_segments(cfg):
         "test_rank_icir": float(rank_icir),
     }
     
-    model_path = Path("outputs/models/xgboost_regression.model")
+    model_path = OUTPUT_MODELS_DIR / "xgboost_regression.model"
     model_path.parent.mkdir(parents=True, exist_ok=True)
     model.save_model(str(model_path))
     

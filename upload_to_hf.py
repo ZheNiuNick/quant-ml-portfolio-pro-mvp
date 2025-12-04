@@ -10,6 +10,10 @@ from huggingface_hub import HfApi
 import os
 import sys
 
+# 使用统一的路径管理
+sys.path.insert(0, str(Path(__file__).parent))
+from src.config.path import DATA_FACTORS_DIR, get_path
+
 # 配置
 REPO_ID = "NickNiu/quant-ml-data"
 REPO_TYPE = "dataset"
@@ -20,7 +24,7 @@ def upload_factor_store(token=None):
     """上传 factor_store.parquet 到 Hugging Face"""
     
     # 检查文件是否存在
-    file_path = Path(FILE_TO_UPLOAD)
+    file_path = get_path(FILE_TO_UPLOAD, DATA_FACTORS_DIR)
     if not file_path.exists():
         print(f"❌ 错误：文件不存在: {file_path}")
         print(f"   当前工作目录: {Path.cwd()}")

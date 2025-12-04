@@ -17,19 +17,18 @@ import numpy as np
 import pandas as pd
 import yaml
 
-# 获取项目根目录（backtest.py 所在目录的父目录）
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SETTINGS = PROJECT_ROOT / "config" / "settings.yaml"
+# 使用统一的路径管理
+from src.config.path import ROOT_DIR, SETTINGS_FILE, OUTPUT_BACKTESTS_DIR, get_path
+
+SETTINGS = SETTINGS_FILE
 
 
-def load_settings(path: Path = SETTINGS) -> Dict:
+def load_settings(path = SETTINGS_FILE) -> Dict:
     """加载配置文件，支持绝对路径和相对路径"""
     if isinstance(path, str):
-        # 如果是相对路径，从项目根目录解析
-        if not os.path.isabs(path):
-            path = PROJECT_ROOT / path
-        else:
-            path = Path(path)
+        path = get_path(path) if not os.path.isabs(path) else Path(path)
+    else:
+        path = get_path(str(path)) if not path.is_absolute() else path
     
     with open(path, "r") as f:
         return yaml.safe_load(f)
@@ -55,10 +54,7 @@ def risk_analysis(returns: pd.Series, periods_per_year: int = 252) -> Dict[str, 
 
 def run_backtest(cfg: Dict):
     print("[Backtest] Loading weights and prices...")
-    weights_path = Path(cfg["paths"]["portfolio_path"])
-    # 如果是相对路径，从项目根目录解析
-    if not weights_path.is_absolute():
-        weights_path = PROJECT_ROOT / weights_path
+    weights_path = get_path(cfg["paths"]["portfolio_path"])
     
     if not weights_path.exists():
         raise FileNotFoundError(
@@ -70,10 +66,7 @@ def run_backtest(cfg: Dict):
     weights.index = pd.to_datetime(weights.index)
     weights = weights.fillna(0.0)
     
-    prices_path = Path(cfg["paths"]["prices_parquet"])
-    # 如果是相对路径，从项目根目录解析
-    if not prices_path.is_absolute():
-        prices_path = PROJECT_ROOT / prices_path
+    prices_path = get_path(cfg["paths"]["prices_parquet"])
     prices = pd.read_parquet(prices_path)
     prices.index = pd.MultiIndex.from_tuples(prices.index, names=["date", "ticker"])
     
@@ -148,7 +141,7 @@ def run_backtest(cfg: Dict):
         "avg_cost": float(cost_rate.mean()),
     }
 
-    output_dir = Path("outputs/backtests")
+    output_dir = OUTPUT_BACKTESTS_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     daily.to_parquet(output_dir / "daily_returns.parquet")
     with open(output_dir / "summary.json", "w") as f:

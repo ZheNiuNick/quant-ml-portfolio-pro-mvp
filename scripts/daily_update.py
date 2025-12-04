@@ -30,9 +30,10 @@ import pandas as pd
 import numpy as np
 import yaml
 
-# 添加项目根目录到路径
+# 使用统一的路径管理
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from src.config.path import SETTINGS_FILE, get_path
 from src.data_pipeline import (
     load_settings,
     get_tickers_from_qlib,
@@ -53,12 +54,12 @@ from src.optimizer import (
 
 warnings.filterwarnings("ignore")
 
-SETTINGS = "config/settings.yaml"
+SETTINGS = SETTINGS_FILE
 
 
 def load_top100_tickers() -> list:
     """加载市值前100股票列表"""
-    top100_file = Path("data/top100_stocks.txt")
+    top100_file = get_path("data/top100_stocks.txt")
     if top100_file.exists():
         with open(top100_file, "r") as f:
             tickers = [line.strip() for line in f if line.strip()]

@@ -15,14 +15,13 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-# 添加项目根目录到路径
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+# 使用统一的路径管理
+sys.path.insert(0, str(Path(__file__).parent))
 
+from src.config.path import SETTINGS_FILE, OUTPUT_DIR, DATA_FACTORS_DIR, get_path
 from src.factor_engine import read_prices, forward_return, load_settings as load_factor_settings
 
-SETTINGS = project_root / "config" / "settings.yaml"
-OUTPUT_DIR = project_root / "outputs"
+SETTINGS = SETTINGS_FILE
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 def generate_long_short_performance():
@@ -36,9 +35,10 @@ def generate_long_short_performance():
         
         # 读取配置
         factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+        factor_store_path = get_path(
+            factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"),
+            DATA_FACTORS_DIR
+        )
         
         if not factor_store_path.exists():
             print(f"❌ 文件不存在: {factor_store_path}")
@@ -56,8 +56,7 @@ def generate_long_short_performance():
         print("📖 读取价格数据...")
         if "paths" in factor_cfg and "prices_parquet" in factor_cfg["paths"]:
             parquet_path = factor_cfg["paths"]["prices_parquet"]
-            if not Path(parquet_path).is_absolute():
-                factor_cfg["paths"]["prices_parquet"] = str(project_root / parquet_path)
+            factor_cfg["paths"]["prices_parquet"] = str(get_path(parquet_path))
         
         prices = read_prices(factor_cfg)
         if prices is None or len(prices) == 0:
@@ -188,9 +187,10 @@ def generate_correlation_matrix():
     
     try:
         factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+        factor_store_path = get_path(
+            factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"),
+            DATA_FACTORS_DIR
+        )
         
         if not factor_store_path.exists():
             print(f"❌ 文件不存在: {factor_store_path}")
@@ -267,9 +267,10 @@ def generate_risk_exposure():
     
     try:
         factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+        factor_store_path = get_path(
+            factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"),
+            DATA_FACTORS_DIR
+        )
         
         if not factor_store_path.exists():
             print(f"❌ 文件不存在: {factor_store_path}")

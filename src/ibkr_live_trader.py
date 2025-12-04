@@ -1060,8 +1060,12 @@ class IBKRLiveTrader:
 
 
 def main():
+    # 使用统一的路径管理
+    from src.config.path import OUTPUT_PORTFOLIOS_DIR, get_path
+    
     parser = argparse.ArgumentParser(description="IBKR Live Trader (基于 ib_insync，同步版本)")
-    parser.add_argument("--weights", default="outputs/portfolios/weights.parquet", help="权重文件路径")
+    default_weights = str(OUTPUT_PORTFOLIOS_DIR / "weights.parquet")
+    parser.add_argument("--weights", default=default_weights, help="权重文件路径")
     parser.add_argument("--capital", type=float, default=0.0, help="总资金（0=自动读取账户资金）")
     parser.add_argument("--capital-usage-ratio", type=float, default=0.90, help="资金使用比例（0.90=只用90%%，留10%%缓冲）")
     parser.add_argument("--ib-host", default="127.0.0.1", help="IB Gateway/TWS 主机")
@@ -1086,8 +1090,9 @@ def main():
         market_data_type=args.market_data_type,
     )
 
-    # 同步调用
-    trader.run(Path(args.weights), args.capital, args.capital_usage_ratio)
+    # 同步调用（如果用户传入的是相对路径，使用 get_path 解析）
+    weights_path = get_path(args.weights, OUTPUT_PORTFOLIOS_DIR) if not Path(args.weights).is_absolute() else Path(args.weights)
+    trader.run(weights_path, args.capital, args.capital_usage_ratio)
 
 
 if __name__ == "__main__":

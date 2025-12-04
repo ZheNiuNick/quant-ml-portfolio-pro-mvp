@@ -16,12 +16,14 @@ import sys
 from pathlib import Path
 import pandas as pd
 
-# 添加项目根目录到路径
+# 使用统一的路径管理
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.config.path import get_path
 
 def load_top100_tickers() -> list:
     """加载市值前100股票列表"""
-    top100_file = Path("data/top100_stocks.txt")
+    top100_file = get_path("data/top100_stocks.txt")
     if top100_file.exists():
         with open(top100_file, "r") as f:
             tickers = [line.strip() for line in f if line.strip()]

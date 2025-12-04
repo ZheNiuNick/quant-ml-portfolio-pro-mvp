@@ -5,6 +5,8 @@
 """
 
 import os
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Optional
 import logging
@@ -67,33 +69,56 @@ def download_from_hf(
         print(f"[INFO] 推断的项目根目录: {project_root}")
         print(f"[INFO] 下载后预期路径: {project_root / filename}")
         
-        downloaded_path = hf_hub_download(
-            repo_id=repo_id,
-            repo_type="dataset",
-            filename=filename,
-            local_dir=str(project_root),
-            local_dir_use_symlinks=False,
-            force_download=force_download,
-        )
-        
-        downloaded_path_obj = Path(downloaded_path)
-        print(f"[INFO] 实际下载路径: {downloaded_path_obj}")
-        print(f"[INFO] 目标路径: {local_path}")
-        
-        # 如果下载路径与目标路径不同，需要移动文件
-        if downloaded_path_obj != local_path:
-            if downloaded_path_obj.exists():
-                # 确保目标目录存在
-                local_path.parent.mkdir(parents=True, exist_ok=True)
-                # 如果目标文件已存在，先删除
-                if local_path.exists():
-                    local_path.unlink()
-                # 移动文件到目标位置
-                downloaded_path_obj.rename(local_path)
-                print(f"[INFO] 文件已移动到: {local_path}")
-            else:
-                print(f"[ERROR] 下载的文件不存在: {downloaded_path_obj}")
+        # 使用临时目录下载，确保文件完整后再移动到目标位置
+        with tempfile.TemporaryDirectory() as temp_dir:
+            print(f"[INFO] 使用临时目录下载: {temp_dir}")
+            temp_downloaded = hf_hub_download(
+                repo_id=repo_id,
+                repo_type="dataset",
+                filename=filename,
+                local_dir=temp_dir,
+                local_dir_use_symlinks=False,
+                force_download=force_download,
+            )
+            
+            temp_downloaded_obj = Path(temp_downloaded)
+            print(f"[INFO] 临时下载路径: {temp_downloaded_obj}")
+            print(f"[INFO] 目标路径: {local_path}")
+            
+            if not temp_downloaded_obj.exists():
+                print(f"[ERROR] 下载的文件不存在: {temp_downloaded_obj}")
                 return False
+            
+            # 验证临时文件大小（应该 > 100MB）
+            temp_size = temp_downloaded_obj.stat().st_size / (1024 * 1024)
+            print(f"[INFO] 临时文件大小: {temp_size:.2f} MB")
+            
+            if temp_size < 100:  # 如果文件太小，可能是下载失败
+                print(f"[ERROR] 下载的文件太小 ({temp_size:.2f} MB)，可能下载失败")
+                return False
+            
+            # 验证临时文件是否为有效的 Parquet 文件
+            try:
+                import pyarrow.parquet as pq
+                parquet_file = pq.ParquetFile(temp_downloaded_obj)
+                num_rows = parquet_file.metadata.num_rows
+                num_columns = len(parquet_file.schema)
+                print(f"[INFO] 临时文件验证成功: {num_rows} 行, {num_columns} 列")
+            except Exception as e:
+                print(f"[ERROR] 临时文件验证失败: {e}")
+                return False
+            
+            # 确保目标目录存在
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # 如果目标文件已存在，先删除
+            if local_path.exists():
+                print(f"[INFO] 删除已存在的目标文件: {local_path}")
+                local_path.unlink()
+            
+            # 使用 shutil.copy2 复制文件（更安全）
+            shutil.copy2(temp_downloaded_obj, local_path)
+            print(f"[INFO] 文件已复制到目标位置: {local_path}")
         
         if local_path.exists():
             file_size = local_path.stat().st_size / (1024 * 1024)  # MB

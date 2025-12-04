@@ -18,48 +18,21 @@ from plotly.subplots import make_subplots
 from flask import Flask, render_template, jsonify, request
 import yaml
 
-# 智能查找项目根目录
-# 项目根目录应该包含 src/ 和 config/ 目录
-def find_project_root():
-    """查找项目根目录（包含 src/ 和 config/ 的目录）"""
-    current = Path(__file__).resolve()
-    
-    # 尝试从 app.py 的位置向上查找
-    for path in [current.parent.parent, current.parent, Path.cwd()]:
-        if (path / "src").exists() and (path / "config").exists():
-            return path
-    
-    # 如果都找不到，尝试从当前工作目录查找
-    cwd = Path.cwd()
-    if (cwd / "src").exists() and (cwd / "config").exists():
-        return cwd
-    
-    # 如果还是找不到，尝试从 app.py 的父目录的父目录
-    # 这适用于 app.py 在 zhe_trading_strategy/ 目录下的情况
-    app_dir = current.parent
-    parent = app_dir.parent
-    if (parent / "src").exists() and (parent / "config").exists():
-        return parent
-    
-    # 最后尝试：如果当前目录就是项目根
-    if (current / "src").exists() and (current / "config").exists():
-        return current
-    
-    # 如果都找不到，返回 app.py 的父目录的父目录（默认行为）
-    return app_dir.parent
+# 使用统一的路径管理
+# 添加项目根目录到路径（path.py 会处理项目根目录的查找）
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# 添加项目根目录到路径
-project_root = find_project_root()
-sys.path.insert(0, str(project_root))
-
-# 验证项目根目录
-if not (project_root / "src").exists():
-    raise ImportError(
-        f"无法找到项目根目录。当前工作目录: {Path.cwd()}, "
-        f"app.py 位置: {Path(__file__).resolve()}, "
-        f"尝试的项目根: {project_root}. "
-        f"请确保 src/ 目录存在。"
-    )
+from src.config.path import (
+    ROOT_DIR as project_root,
+    SETTINGS_FILE,
+    OUTPUT_DIR,
+    OUTPUT_BACKTESTS_DIR as BACKTEST_DIR,
+    OUTPUT_PORTFOLIOS_DIR as PORTFOLIO_DIR,
+    OUTPUT_REPORTS_DIR as REPORTS_DIR,
+    OUTPUT_IBKR_DATA_DIR,
+    DATA_FACTORS_DIR,
+    get_path,
+)
 
 # 导入 src 模块的真实函数
 from src.backtest import load_settings, risk_analysis
@@ -81,12 +54,7 @@ app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
 # 加载配置
-SETTINGS = project_root / "config" / "settings.yaml"
-if not SETTINGS.exists():
-    raise FileNotFoundError(
-        f"无法找到配置文件: {SETTINGS}. "
-        f"项目根目录: {project_root}"
-    )
+SETTINGS = SETTINGS_FILE
 cfg = load_settings(str(SETTINGS))
 
 # 导入 Dashboard 配置
@@ -102,12 +70,7 @@ except ImportError:
         'enabled': os.getenv('IBKR_ENABLED', 'false').lower() == 'true'
     }
 
-# 数据路径
-DATA_DIR = project_root / "outputs"
-OUTPUT_DIR = DATA_DIR  # 用于预计算的文件
-BACKTEST_DIR = DATA_DIR / "backtests"
-PORTFOLIO_DIR = DATA_DIR / "portfolios"
-REPORTS_DIR = DATA_DIR / "reports"
+# 数据路径已在 path.py 中定义，无需重复定义
 
 
 def get_factor_store_path(factor_cfg=None):
@@ -123,9 +86,10 @@ def get_factor_store_path(factor_cfg=None):
     if factor_cfg is None:
         factor_cfg = load_factor_settings(str(SETTINGS))
     
-    factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-    if not factor_store_path.is_absolute():
-        factor_store_path = project_root / factor_store_path
+    factor_store_path = get_path(
+        factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"),
+        DATA_FACTORS_DIR
+    )
     
     return factor_store_path
 
@@ -292,7 +256,7 @@ def backtest_chart():
         # 尝试加载基准数据（从价格数据计算 S&P500 收益）
         benchmark_returns = None
         try:
-            prices = load_parquet_safe(project_root / "data" / "processed" / "prices.parquet")
+            prices = load_parquet_safe(get_path("data/processed/prices.parquet"))
             if prices is not None:
                 # 计算基准收益（所有股票的平均收益，近似 S&P500）
                 if isinstance(prices.index, pd.MultiIndex):
@@ -436,7 +400,7 @@ def factor_dates():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         factor_store = None
         if factor_store_path.exists():
@@ -451,7 +415,7 @@ def factor_dates():
                 import duckdb
                 db_path = factor_cfg["database"].get("duckdb_path", "data/duckdb/prices.db")
                 if not Path(db_path).is_absolute():
-                    db_path = project_root / db_path
+                    db_path = get_path(db_path)
                 con = duckdb.connect(str(db_path))
                 try:
                     factor_store = con.execute("SELECT * FROM factor_store").df()
@@ -497,7 +461,7 @@ def factors_by_date():
         # 尝试从 parquet 读取
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         factor_store = None
         if factor_store_path.exists():
@@ -512,7 +476,7 @@ def factors_by_date():
                 import duckdb
                 db_path = factor_cfg["database"].get("duckdb_path", "data/duckdb/prices.db")
                 if not Path(db_path).is_absolute():
-                    db_path = project_root / db_path
+                    db_path = get_path(db_path)
                 
                 con = duckdb.connect(str(db_path))
                 # 尝试从 DuckDB 读取因子数据（如果存在）
@@ -620,7 +584,7 @@ def rolling_ic():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
         
@@ -696,7 +660,7 @@ def rolling_icir():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
         
@@ -764,7 +728,7 @@ def rolling_tstat():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
         
@@ -952,7 +916,7 @@ def factor_clusters():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
         
@@ -1155,7 +1119,7 @@ def factor_diagnostics_latest_date():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         if not factor_store_path.exists():
             return jsonify({"error": "因子数据不存在", "date": None}), 200
@@ -1193,7 +1157,7 @@ def factor_report_daily():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         # 读取IC/ICIR数据（从每日因子更新模块生成）
         ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
@@ -1353,7 +1317,7 @@ def top_factors():
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
         if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+            factor_store_path = get_path(factor_store_path, DATA_FACTORS_DIR)
         
         factor_store = None
         if factor_store_path.exists():
@@ -1574,7 +1538,7 @@ def current_positions():
     date = request.args.get('date')  # 支持日期参数
     
     # 先尝试从文件读取 IBKR 持仓数据
-    ibkr_positions_file = project_root / "outputs" / "ibkr_data" / "positions.json"
+    ibkr_positions_file = OUTPUT_IBKR_DATA_DIR / "positions.json"
     if ibkr_positions_file.exists():
         try:
             with open(ibkr_positions_file, 'r', encoding='utf-8') as f:
@@ -1627,7 +1591,7 @@ def current_positions():
             print(f"[Warn] Failed to get IBKR positions in real-time: {e}")
     
     # 回退到真实权重文件（从策略优化器生成）
-    weights_path = project_root / "outputs" / "portfolios" / "weights.parquet"
+    weights_path = PORTFOLIO_DIR / "weights.parquet"
     if not weights_path.exists():
         weights_path = PORTFOLIO_DIR / "weights.parquet"
     
@@ -1694,7 +1658,7 @@ def current_positions():
         if "paths" in cfg_copy and "prices_parquet" in cfg_copy["paths"]:
             parquet_path = cfg_copy["paths"]["prices_parquet"]
             if not Path(parquet_path).is_absolute():
-                cfg_copy["paths"]["prices_parquet"] = str(project_root / parquet_path)
+                cfg_copy["paths"]["prices_parquet"] = str(get_path(parquet_path))
         
         prices = read_prices(cfg_copy)
     except Exception as e:
@@ -2014,7 +1978,7 @@ def blotter_trades():
     ticker_filter = request.args.get('ticker', '').upper()
     
     # 先尝试从文件读取 IBKR 交易记录
-    ibkr_trades_file = project_root / "outputs" / "ibkr_data" / "trades.json"
+    ibkr_trades_file = OUTPUT_IBKR_DATA_DIR / "trades.json"
     if ibkr_trades_file.exists():
         try:
             with open(ibkr_trades_file, 'r', encoding='utf-8') as f:
@@ -2394,7 +2358,7 @@ def backtest_analysis():
         sector_exposure = {}
         try:
             # 读取权重数据
-            weights_path = project_root / "outputs" / "portfolios" / "weights.parquet"
+            weights_path = PORTFOLIO_DIR / "weights.parquet"
             if not weights_path.exists():
                 weights_path = PORTFOLIO_DIR / "weights.parquet"
             
@@ -2572,7 +2536,7 @@ def performance_real_time():
     # 先尝试从文件读取 IBKR 收益数据（但IBKR数据没有历史曲线，所以需要fallback到回测数据）
     # IBKR数据只用于显示当前PnL，历史曲线使用回测数据
     ibkr_pnl_data = None
-    ibkr_pnl_file = project_root / "outputs" / "ibkr_data" / "pnl.json"
+    ibkr_pnl_file = OUTPUT_IBKR_DATA_DIR / "pnl.json"
     if ibkr_pnl_file.exists():
         try:
             with open(ibkr_pnl_file, 'r', encoding='utf-8') as f:

@@ -28,13 +28,17 @@ from src.alpha101 import calculate_alpha101_factors
 from src.talib_factors import calculate_talib_factors
 from src.custom_factors import calculate_custom_factors
 
-SETTINGS = "config/settings.yaml"
+# 使用统一的路径管理
+from src.config.path import SETTINGS_FILE, DATA_PROCESSED_DIR, DATA_FACTORS_DIR, DUCKDB_DIR, get_path
+
+SETTINGS = SETTINGS_FILE
 
 # ------------------------
 # Config & IO
 # ------------------------
-def load_settings(path=SETTINGS):
+def load_settings(path=SETTINGS_FILE):
     import yaml
+    path = get_path(path) if isinstance(path, str) and not Path(path).is_absolute() else Path(path)
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -43,8 +47,8 @@ def read_prices(cfg) -> pd.DataFrame:
     Read daily OHLCV from parquet file or DuckDB.
     """
     # Try parquet file first
-    parquet_path = cfg["paths"].get("prices_parquet", "data/processed/prices.parquet")
-    if Path(parquet_path).exists():
+    parquet_path = get_path(cfg["paths"].get("prices_parquet", "data/processed/prices.parquet"), DATA_PROCESSED_DIR)
+    if parquet_path.exists():
         try:
             df = pd.read_parquet(parquet_path)
             if not isinstance(df.index, pd.MultiIndex):
@@ -648,7 +652,7 @@ def build_and_evaluate(cfg):
             traceback.print_exc()
     
     # Save factor store
-    store_path = Path(cfg["paths"]["factors_store"])
+    store_path = get_path(cfg["paths"]["factors_store"], DATA_FACTORS_DIR)
     store_path.parent.mkdir(parents=True, exist_ok=True)
     factor_store.to_parquet(store_path)
     
