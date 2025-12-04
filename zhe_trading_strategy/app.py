@@ -926,8 +926,9 @@ def long_short_performance():
         
         print(f"[DEBUG] long-short API - 开始读取 factor_store.parquet")
         try:
+            print(f"[DEBUG] 使用 pandas 读取 Parquet 文件...")
             factor_store = pd.read_parquet(factor_store_path)
-            print(f"[DEBUG] long-short API - 读取成功，shape: {factor_store.shape}")
+            print(f"[DEBUG] long-short API - 读取成功，shape: {factor_store.shape}, 内存使用: {factor_store.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
         except Exception as e:
             print(f"[ERROR] long-short API - 读取 Parquet 文件失败: {e}")
             print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
@@ -1252,8 +1253,10 @@ def factor_correlation():
         
         print(f"[DEBUG] correlation API - 开始读取 factor_store.parquet")
         try:
+            # 使用 pandas 直接读取，pandas 会自动处理索引
+            print(f"[DEBUG] 使用 pandas 读取 Parquet 文件...")
             factor_store = pd.read_parquet(factor_store_path)
-            print(f"[DEBUG] correlation API - 读取成功，shape: {factor_store.shape}")
+            print(f"[DEBUG] correlation API - 读取成功，shape: {factor_store.shape}, 内存使用: {factor_store.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
         except Exception as e:
             print(f"[ERROR] correlation API - 读取 Parquet 文件失败: {e}")
             print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
@@ -1376,8 +1379,9 @@ def risk_exposure():
         
         print(f"[DEBUG] risk-exposure API - 开始读取 factor_store.parquet")
         try:
+            print(f"[DEBUG] 使用 pandas 读取 Parquet 文件...")
             factor_store = pd.read_parquet(factor_store_path)
-            print(f"[DEBUG] risk-exposure API - 读取成功，shape: {factor_store.shape}")
+            print(f"[DEBUG] risk-exposure API - 读取成功，shape: {factor_store.shape}, 内存使用: {factor_store.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
         except Exception as e:
             print(f"[ERROR] risk-exposure API - 读取 Parquet 文件失败: {e}")
             print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")

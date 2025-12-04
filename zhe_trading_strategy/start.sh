@@ -15,5 +15,6 @@ fi
 cd zhe_trading_strategy
 
 # 运行 gunicorn
-exec gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 2 --timeout 120 --access-logfile - --error-logfile -
+# 减少 worker 数量到 1 个，避免内存不足（317MB Parquet 文件需要大量内存）
+exec gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 300 --access-logfile - --error-logfile -
 
