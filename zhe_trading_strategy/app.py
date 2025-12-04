@@ -104,18 +104,18 @@ except ImportError:
 
 # 数据路径
 DATA_DIR = project_root / "outputs"
+OUTPUT_DIR = DATA_DIR  # 用于预计算的文件
 BACKTEST_DIR = DATA_DIR / "backtests"
 PORTFOLIO_DIR = DATA_DIR / "portfolios"
 REPORTS_DIR = DATA_DIR / "reports"
 
 
-def get_factor_store_path(factor_cfg=None, auto_download=True):
+def get_factor_store_path(factor_cfg=None):
     """
-    获取 factor_store.parquet 的路径，如果不存在则尝试从 Hugging Face 自动下载
+    获取 factor_store.parquet 的路径
     
     Args:
         factor_cfg: 因子配置（可选）
-        auto_download: 是否自动下载（如果文件不存在）
     
     Returns:
         factor_store.parquet 的路径
@@ -126,14 +126,6 @@ def get_factor_store_path(factor_cfg=None, auto_download=True):
     factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
     if not factor_store_path.is_absolute():
         factor_store_path = project_root / factor_store_path
-    
-    # 尝试自动从 Hugging Face 下载（如果文件不存在）
-    if auto_download and not factor_store_path.exists():
-        try:
-            from src.data_loader import ensure_factor_store
-            ensure_factor_store(factor_store_path, auto_download=True)
-        except ImportError:
-            pass  # data_loader 模块不存在时忽略
     
     return factor_store_path
 
@@ -828,36 +820,37 @@ def rolling_tstat():
 
 @app.route('/api/factor-diagnostics/factors')
 def factor_diagnostics_factors():
-    """获取所有因子列表"""
+    """获取所有因子列表 - 从预计算的 JSON 文件中读取"""
     try:
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+        # 尝试从预计算的 Long-Short 文件中读取因子列表
+        precomputed_file = OUTPUT_DIR / "factor_long_short.json"
         
-        # 尝试自动从 Hugging Face 下载（如果文件不存在）
-        if not factor_store_path.exists():
-            try:
-                from src.data_loader import ensure_factor_store
-                if not ensure_factor_store(factor_store_path, auto_download=True):
-                    return jsonify({
-                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...",
-                        "factors": [],
-                        "downloading": True
-                    }), 200
-            except ImportError:
-                pass
+        if precomputed_file.exists():
+            with open(precomputed_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            factors = list(data.keys())
+            return jsonify({
+                "error": None,
+                "factors": factors
+            })
         
-        if not factor_store_path.exists():
-            return jsonify({"error": "因子数据不存在", "factors": []}), 200
+        # Fallback: 尝试从相关性矩阵文件中读取
+        corr_file = OUTPUT_DIR / "factor_corr.json"
+        if corr_file.exists():
+            with open(corr_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            factors = data.get("factors", [])
+            return jsonify({
+                "error": None,
+                "factors": factors
+            })
         
-        factor_store = pd.read_parquet(factor_store_path)
-        factors = list(factor_store.columns) if isinstance(factor_store, pd.DataFrame) else []
-        
+        # 如果预计算文件都不存在，返回错误
         return jsonify({
-            "error": None,
-            "factors": factors
-        })
+            "error": "预计算的因子数据不存在。请运行 generate_factor_precomputed.py 生成数据。",
+            "factors": []
+        }), 200
+        
     except Exception as e:
         return jsonify({
             "error": f"获取因子列表失败: {str(e)}",
@@ -867,7 +860,7 @@ def factor_diagnostics_factors():
 
 @app.route('/api/factor-diagnostics/long-short')
 def long_short_performance():
-    """Long-Short Portfolio Performance（按因子分层）"""
+    """Long-Short Portfolio Performance（按因子分层）- 使用预计算的 JSON 文件"""
     factor_name = request.args.get('factor')
     
     if not factor_name:
@@ -881,42 +874,12 @@ def long_short_performance():
         }), 200
     
     try:
-        from src.factor_engine import read_prices, forward_return
+        # 读取预计算的 JSON 文件
+        precomputed_file = OUTPUT_DIR / "factor_long_short.json"
         
-        # 读取因子数据
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
-        
-        # 尝试自动从 Hugging Face 下载（如果文件不存在）
-        if not factor_store_path.exists():
-            print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
-            try:
-                from src.data_loader import ensure_factor_store
-                print(f"[DEBUG] 开始尝试从 Hugging Face 下载 factor_store.parquet...")
-                download_success = ensure_factor_store(factor_store_path, auto_download=True)
-                print(f"[DEBUG] 下载结果: {download_success}, 文件存在: {factor_store_path.exists()}")
-                if not download_success or not factor_store_path.exists():
-                    return jsonify({
-                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...（如果持续失败，请检查文件是否已上传到 Hugging Face）",
-                        "dates": [],
-                        "long_returns": [],
-                        "short_returns": [],
-                        "long_short_returns": [],
-                        "stats": {},
-                        "downloading": True
-                    }), 200
-            except ImportError as e:
-                print(f"[ERROR] 无法导入 data_loader: {e}")
-            except Exception as e:
-                print(f"[ERROR] 下载 factor_store.parquet 时出错: {e}")
-                import traceback
-                traceback.print_exc()
-        
-        if not factor_store_path.exists():
+        if not precomputed_file.exists():
             return jsonify({
-                "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
+                "error": "预计算的 Long-Short 数据不存在。请运行 generate_factor_precomputed.py 生成数据。",
                 "dates": [],
                 "long_returns": [],
                 "short_returns": [],
@@ -924,36 +887,14 @@ def long_short_performance():
                 "stats": {}
             }), 200
         
-        print(f"[DEBUG] long-short API - 开始读取 factor_store.parquet")
-        try:
-            print(f"[DEBUG] 使用 pandas 读取 Parquet 文件...")
-            factor_store = pd.read_parquet(factor_store_path)
-            print(f"[DEBUG] long-short API - 读取成功，shape: {factor_store.shape}, 内存使用: {factor_store.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
-        except Exception as e:
-            print(f"[ERROR] long-short API - 读取 Parquet 文件失败: {e}")
-            print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
-            # 删除损坏的文件
-            if factor_store_path.exists():
-                factor_store_path.unlink()
-            # 尝试重新下载
-            try:
-                from src.data_loader import ensure_factor_store
-                if ensure_factor_store(factor_store_path, auto_download=True):
-                    factor_store = pd.read_parquet(factor_store_path)
-                    print(f"[INFO] 重新下载并读取成功")
-                else:
-                    raise Exception("重新下载失败")
-            except Exception as e2:
-                print(f"[ERROR] 重新下载也失败: {e2}")
-                raise e
-        if not isinstance(factor_store.index, pd.MultiIndex):
-            if "date" in factor_store.columns and "ticker" in factor_store.columns:
-                factor_store["date"] = pd.to_datetime(factor_store["date"])
-                factor_store = factor_store.set_index(["date", "ticker"]).sort_index()
+        print(f"[INFO] 读取预计算的 Long-Short 数据: {precomputed_file}")
+        with open(precomputed_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
         
-        if factor_name not in factor_store.columns:
+        if factor_name not in data:
+            available_factors = list(data.keys())[:20]  # 显示前20个
             return jsonify({
-                "error": f"因子 {factor_name} 不存在",
+                "error": f"因子 {factor_name} 不存在。可用因子示例: {available_factors}",
                 "dates": [],
                 "long_returns": [],
                 "short_returns": [],
@@ -961,139 +902,14 @@ def long_short_performance():
                 "stats": {}
             }), 200
         
-        # 读取价格数据 - 使用factor_cfg，并确保路径解析正确
-        try:
-            # 确保使用正确的配置对象（包含paths和database）
-            # 如果路径是相对路径，需要转换为绝对路径
-            if "paths" in factor_cfg and "prices_parquet" in factor_cfg["paths"]:
-                parquet_path = factor_cfg["paths"]["prices_parquet"]
-                if not Path(parquet_path).is_absolute():
-                    factor_cfg["paths"]["prices_parquet"] = str(project_root / parquet_path)
-            
-            prices = read_prices(factor_cfg)
-        except Exception as e:
-            import traceback
-            error_msg = str(e)
-            traceback_str = traceback.format_exc() if IBKR_CONFIG.get('debug', False) else None
-            return jsonify({
-                "error": f"无法加载价格数据: {error_msg}",
-                "dates": [],
-                "long_returns": [],
-                "short_returns": [],
-                "long_short_returns": [],
-                "stats": {},
-                "traceback": traceback_str
-            }), 200
-        
-        if prices is None or len(prices) == 0:
-            return jsonify({
-                "error": "价格数据不存在或为空",
-                "dates": [],
-                "long_returns": [],
-                "short_returns": [],
-                "long_short_returns": [],
-                "stats": {}
-            }), 200
-        
-        # 计算未来收益 - 先处理重复索引
-        # 移除prices中的重复索引
-        if isinstance(prices.index, pd.MultiIndex):
-            prices = prices[~prices.index.duplicated(keep='first')]
-        
-        forward_ret = forward_return(prices, horizon=1)
-        
-        # 移除forward_ret中的重复索引
-        if isinstance(forward_ret.index, pd.MultiIndex):
-            forward_ret = forward_ret[~forward_ret.index.duplicated(keep='first')]
-        
-        # 获取近12个月的数据（如果数据不足12个月，使用所有可用数据）
-        latest_date = factor_store.index.get_level_values(0).max()
-        start_date = latest_date - pd.DateOffset(months=12)
-        date_range = factor_store.index.get_level_values(0).unique()
-        date_range = date_range[date_range >= start_date]
-        
-        # 如果近12个月数据不足，使用所有可用数据
-        if len(date_range) == 0:
-            date_range = factor_store.index.get_level_values(0).unique()
-        
-        # 按日期计算long-short收益
-        dates = []
-        long_returns = []
-        short_returns = []
-        long_short_returns = []
-        
-        for date in sorted(date_range):
-            date_factors = factor_store.loc[factor_store.index.get_level_values(0) == date, factor_name]
-            # 移除重复索引
-            if isinstance(date_factors.index, pd.MultiIndex):
-                date_factors = date_factors[~date_factors.index.duplicated(keep='first')]
-            
-            date_forward_ret = forward_ret.loc[forward_ret.index.get_level_values(0) == date]
-            # 移除重复索引
-            if isinstance(date_forward_ret.index, pd.MultiIndex):
-                date_forward_ret = date_forward_ret[~date_forward_ret.index.duplicated(keep='first')]
-            
-            # 对齐索引
-            aligned = pd.concat([date_factors, date_forward_ret], axis=1).dropna()
-            if len(aligned) < 20:  # 至少需要20个股票
-                continue
-            
-            # 按因子值排序，分成5层
-            aligned = aligned.sort_values(by=aligned.columns[0])
-            n = len(aligned)
-            long_portfolio = aligned.iloc[-n//5:]  # Top 20%
-            short_portfolio = aligned.iloc[:n//5]  # Bottom 20%
-            
-            # 计算收益
-            long_ret = long_portfolio.iloc[:, 1].mean()
-            short_ret = short_portfolio.iloc[:, 1].mean()
-            ls_ret = long_ret - short_ret
-            
-            dates.append(date.strftime("%Y-%m-%d"))
-            long_returns.append(float(long_ret))
-            short_returns.append(float(short_ret))
-            long_short_returns.append(float(ls_ret))
-        
-        # 计算累计收益
-        long_cum = (1 + pd.Series(long_returns)).cumprod()
-        short_cum = (1 + pd.Series(short_returns)).cumprod()
-        ls_cum = (1 + pd.Series(long_short_returns)).cumprod()
-        
-        # 计算统计指标
-        long_returns_series = pd.Series(long_returns)
-        short_returns_series = pd.Series(short_returns)
-        ls_returns_series = pd.Series(long_short_returns)
-        
-        def calc_stats(returns):
-            annual_return = returns.mean() * 252
-            sharpe = returns.mean() / returns.std() * np.sqrt(252) if returns.std() > 0 else 0
-            cum = (1 + returns).cumprod()
-            max_dd = (cum / cum.cummax() - 1).min()
-            return {
-                "annual_return": float(annual_return),
-                "sharpe": float(sharpe),
-                "max_dd": float(max_dd)
-            }
-        
-        stats = {
-            "long_annual_return": calc_stats(long_returns_series)["annual_return"],
-            "long_sharpe": calc_stats(long_returns_series)["sharpe"],
-            "long_max_dd": calc_stats(long_returns_series)["max_dd"],
-            "short_annual_return": calc_stats(short_returns_series)["annual_return"],
-            "short_sharpe": calc_stats(short_returns_series)["sharpe"],
-            "short_max_dd": calc_stats(short_returns_series)["max_dd"],
-            "long_short_annual_return": calc_stats(ls_returns_series)["annual_return"],
-            "long_short_sharpe": calc_stats(ls_returns_series)["sharpe"],
-            "long_short_max_dd": calc_stats(ls_returns_series)["max_dd"]
-        }
-        
+        result = data[factor_name]
         return jsonify({
             "error": None,
-            "dates": dates,
-            "long_returns": long_cum.tolist(),
-            "short_returns": short_cum.tolist(),
-            "long_short_returns": ls_cum.tolist(),
-            "stats": stats
+            "dates": result["dates"],
+            "long_returns": result["long_returns"],
+            "short_returns": result["short_returns"],
+            "long_short_returns": result["long_short_returns"],
+            "stats": result["stats"]
         })
     except Exception as e:
         import traceback
@@ -1207,117 +1023,36 @@ def factor_clusters():
 
 @app.route('/api/factor-diagnostics/correlation')
 def factor_correlation():
-    """因子相关性矩阵"""
+    """因子相关性矩阵 - 使用预计算的 JSON 文件"""
     method = request.args.get('method', 'pearson')
     
     try:
-        # 读取因子数据
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+        # 读取预计算的 JSON 文件
+        precomputed_file = OUTPUT_DIR / "factor_corr.json"
         
-        print(f"[DEBUG] correlation API - factor_store_path: {factor_store_path}")
-        print(f"[DEBUG] correlation API - file exists: {factor_store_path.exists()}")
-        print(f"[DEBUG] correlation API - project_root: {project_root}")
-        
-        # 尝试自动从 Hugging Face 下载（如果文件不存在）
-        if not factor_store_path.exists():
-            print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
-            try:
-                from src.data_loader import ensure_factor_store
-                print(f"[DEBUG] 开始尝试从 Hugging Face 下载 factor_store.parquet...")
-                download_success = ensure_factor_store(factor_store_path, auto_download=True)
-                print(f"[DEBUG] 下载结果: {download_success}, 文件存在: {factor_store_path.exists()}")
-                if not download_success or not factor_store_path.exists():
-                    return jsonify({
-                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...（如果持续失败，请检查文件是否已上传到 Hugging Face）",
-                        "factors": [],
-                        "correlation_matrix": [],
-                        "downloading": True
-                    }), 200
-            except ImportError as e:
-                print(f"[ERROR] 无法导入 data_loader: {e}")
-            except Exception as e:
-                print(f"[ERROR] 下载 factor_store.parquet 时出错: {e}")
-                import traceback
-                traceback.print_exc()
-        
-        if not factor_store_path.exists():
-            print(f"[ERROR] correlation API - factor_store.parquet 不存在: {factor_store_path}")
+        if not precomputed_file.exists():
             return jsonify({
-                "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
+                "error": "预计算的相关性数据不存在。请运行 generate_factor_precomputed.py 生成数据。",
                 "factors": [],
                 "correlation_matrix": []
             }), 200
         
-        print(f"[DEBUG] correlation API - 开始读取 factor_store.parquet")
-        try:
-            # 使用 pandas 直接读取，pandas 会自动处理索引
-            print(f"[DEBUG] 使用 pandas 读取 Parquet 文件...")
-            factor_store = pd.read_parquet(factor_store_path)
-            print(f"[DEBUG] correlation API - 读取成功，shape: {factor_store.shape}, 内存使用: {factor_store.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
-        except Exception as e:
-            print(f"[ERROR] correlation API - 读取 Parquet 文件失败: {e}")
-            print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
-            # 删除损坏的文件
-            if factor_store_path.exists():
-                factor_store_path.unlink()
-            # 尝试重新下载
-            try:
-                from src.data_loader import ensure_factor_store
-                if ensure_factor_store(factor_store_path, auto_download=True):
-                    factor_store = pd.read_parquet(factor_store_path)
-                    print(f"[INFO] 重新下载并读取成功")
-                else:
-                    raise Exception("重新下载失败")
-            except Exception as e2:
-                print(f"[ERROR] 重新下载也失败: {e2}")
-                raise e
-        if not isinstance(factor_store.index, pd.MultiIndex):
-            if "date" in factor_store.columns and "ticker" in factor_store.columns:
-                factor_store["date"] = pd.to_datetime(factor_store["date"])
-                factor_store = factor_store.set_index(["date", "ticker"]).sort_index()
+        print(f"[INFO] 读取预计算的相关性数据: {precomputed_file}")
+        with open(precomputed_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
         
-        # 获取近12个月的数据（如果数据不足12个月，使用所有可用数据）
-        latest_date = factor_store.index.get_level_values(0).max()
-        start_date = latest_date - pd.DateOffset(months=12)
-        recent_factors = factor_store.loc[factor_store.index.get_level_values(0) >= start_date]
-        
-        # 如果近12个月数据不足，使用所有可用数据
-        if len(recent_factors) == 0:
-            recent_factors = factor_store
-        
-        # 选择部分因子（避免矩阵过大）
-        factors = list(recent_factors.columns)[:50]  # 限制为50个因子
-        factor_subset = recent_factors[factors]
-        
-        # 计算相关性矩阵（按日期平均）
-        # 方法：对每个日期计算相关性，然后取平均
-        dates = factor_subset.index.get_level_values(0).unique()
-        corr_list = []
-        
-        for date in dates:
-            date_factors = factor_subset.loc[factor_subset.index.get_level_values(0) == date]
-            if len(date_factors) > 10:  # 至少需要10个股票
-                corr = date_factors.corr(method=method)
-                corr_list.append(corr)
-        
-        if len(corr_list) == 0:
+        # 检查方法是否匹配（目前只支持 pearson）
+        if data.get("method") != method:
             return jsonify({
-                "error": "没有足够的数据计算相关性",
+                "error": f"预计算数据使用的方法 ({data.get('method')}) 与请求的方法 ({method}) 不匹配。目前只支持 pearson。",
                 "factors": [],
                 "correlation_matrix": []
             }), 200
-        
-        # 平均相关性矩阵
-        mean_corr = pd.concat(corr_list).groupby(level=0).mean()
-        mean_corr = mean_corr.fillna(0)
         
         return jsonify({
             "error": None,
-            "factors": factors,
-            "correlation_matrix": mean_corr.values.tolist()
+            "factors": data["factors"],
+            "correlation_matrix": data["correlation_matrix"]
         })
     except Exception as e:
         import traceback
@@ -1331,135 +1066,56 @@ def factor_correlation():
 
 @app.route('/api/factor-diagnostics/risk-exposure')
 def risk_exposure():
-    """多因子风险暴露（Barra-style）"""
+    """多因子风险暴露（Barra-style）- 使用预计算的 JSON 文件"""
     date = request.args.get('date')
     
     try:
-        # 读取因子数据
-        factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = Path(factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"))
-        if not factor_store_path.is_absolute():
-            factor_store_path = project_root / factor_store_path
+        # 读取预计算的 JSON 文件
+        precomputed_file = OUTPUT_DIR / "factor_exposure.json"
         
-        print(f"[DEBUG] risk-exposure API - factor_store_path: {factor_store_path}")
-        print(f"[DEBUG] risk-exposure API - file exists: {factor_store_path.exists()}")
-        print(f"[DEBUG] risk-exposure API - project_root: {project_root}")
-        
-        # 尝试自动从 Hugging Face 下载（如果文件不存在）
-        if not factor_store_path.exists():
-            print(f"[DEBUG] factor_store.parquet 不存在: {factor_store_path}")
-            try:
-                from src.data_loader import ensure_factor_store
-                print(f"[DEBUG] 开始尝试从 Hugging Face 下载 factor_store.parquet...")
-                download_success = ensure_factor_store(factor_store_path, auto_download=True)
-                print(f"[DEBUG] 下载结果: {download_success}, 文件存在: {factor_store_path.exists()}")
-                if not download_success or not factor_store_path.exists():
-                    return jsonify({
-                        "error": "因子数据不存在，正在尝试从 Hugging Face 下载...（如果持续失败，请检查文件是否已上传到 Hugging Face）",
-                        "factors": [],
-                        "exposures": [],
-                        "risk_contributions": [],
-                        "downloading": True
-                    }), 200
-            except ImportError as e:
-                print(f"[ERROR] 无法导入 data_loader: {e}")
-            except Exception as e:
-                print(f"[ERROR] 下载 factor_store.parquet 时出错: {e}")
-                import traceback
-                traceback.print_exc()
-        
-        if not factor_store_path.exists():
-            print(f"[ERROR] risk-exposure API - factor_store.parquet 不存在: {factor_store_path}")
+        if not precomputed_file.exists():
             return jsonify({
-                "error": "因子数据不存在（需要 factor_store.parquet，请上传到 Hugging Face）",
+                "error": "预计算的风险暴露数据不存在。请运行 generate_factor_precomputed.py 生成数据。",
                 "factors": [],
                 "exposures": [],
                 "risk_contributions": []
             }), 200
         
-        print(f"[DEBUG] risk-exposure API - 开始读取 factor_store.parquet")
-        try:
-            print(f"[DEBUG] 使用 pandas 读取 Parquet 文件...")
-            factor_store = pd.read_parquet(factor_store_path)
-            print(f"[DEBUG] risk-exposure API - 读取成功，shape: {factor_store.shape}, 内存使用: {factor_store.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
-        except Exception as e:
-            print(f"[ERROR] risk-exposure API - 读取 Parquet 文件失败: {e}")
-            print(f"[ERROR] 文件可能损坏，尝试删除并重新下载...")
-            # 删除损坏的文件
-            if factor_store_path.exists():
-                factor_store_path.unlink()
-            # 尝试重新下载
-            try:
-                from src.data_loader import ensure_factor_store
-                if ensure_factor_store(factor_store_path, auto_download=True):
-                    factor_store = pd.read_parquet(factor_store_path)
-                    print(f"[INFO] 重新下载并读取成功")
-                else:
-                    raise Exception("重新下载失败")
-            except Exception as e2:
-                print(f"[ERROR] 重新下载也失败: {e2}")
-                raise e
-        if not isinstance(factor_store.index, pd.MultiIndex):
-            if "date" in factor_store.columns and "ticker" in factor_store.columns:
-                factor_store["date"] = pd.to_datetime(factor_store["date"])
-                factor_store = factor_store.set_index(["date", "ticker"]).sort_index()
+        print(f"[INFO] 读取预计算的风险暴露数据: {precomputed_file}")
+        with open(precomputed_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
         
         # 确定日期
-        available_dates = pd.to_datetime(factor_store.index.get_level_values(0).unique()).sort_values()
+        available_dates = sorted(data.keys())
         if date:
-            try:
-                date_obj = pd.to_datetime(date)
-                if date_obj not in available_dates:
-                    nearest_date = available_dates[available_dates <= date_obj]
-                    if len(nearest_date) > 0:
-                        date_obj = nearest_date.max()
-            except:
-                date_obj = available_dates.max()
+            # 查找最接近的日期
+            date_obj = pd.to_datetime(date)
+            nearest_date = None
+            for d in available_dates:
+                if pd.to_datetime(d) <= date_obj:
+                    nearest_date = d
+            if nearest_date:
+                selected_date = nearest_date
+            else:
+                selected_date = available_dates[-1] if available_dates else None
         else:
-            date_obj = available_dates.max()
+            selected_date = available_dates[-1] if available_dates else None
         
-        # 获取该日期的因子数据
-        date_factors = factor_store.loc[factor_store.index.get_level_values(0) == date_obj]
+        if not selected_date or selected_date not in data:
+            return jsonify({
+                "error": f"日期 {date} 的数据不存在。可用日期: {available_dates[-10:]}",
+                "factors": [],
+                "exposures": [],
+                "risk_contributions": []
+            }), 200
         
-        # 计算因子暴露度（标准化后的因子值）
-        exposures = {}
-        for factor_name in date_factors.columns:
-            factor_series = date_factors[factor_name].dropna()
-            if len(factor_series) > 0:
-                # 标准化（z-score）
-                mean_val = factor_series.mean()
-                std_val = factor_series.std()
-                if std_val > 0:
-                    exposures[factor_name] = (factor_series - mean_val) / std_val
-                else:
-                    exposures[factor_name] = pd.Series([0.0] * len(factor_series), index=factor_series.index)
-        
-        # 计算风险贡献（简化版：使用因子方差）
-        risk_contributions = {}
-        total_risk = 0
-        for factor_name, exp_series in exposures.items():
-            risk = exp_series.var()
-            risk_contributions[factor_name] = risk
-            total_risk += risk
-        
-        # 归一化风险贡献
-        if total_risk > 0:
-            for factor_name in risk_contributions:
-                risk_contributions[factor_name] = risk_contributions[factor_name] / total_risk
-        
-        # 计算暴露度统计（使用绝对值的平均值，而不是平均值）
-        # 因为标准化后的因子值平均值为0是正常的，应该显示绝对暴露度
-        avg_exposures = {name: float(exp.abs().mean()) for name, exp in exposures.items()}
-        
-        # 排序（按风险贡献）
-        sorted_factors = sorted(risk_contributions.items(), key=lambda x: x[1], reverse=True)[:30]  # Top 30
-        
+        result = data[selected_date]
         return jsonify({
             "error": None,
-            "date": date_obj.strftime("%Y-%m-%d"),
-            "factors": [f[0] for f in sorted_factors],
-            "exposures": [round(avg_exposures.get(f[0], 0.0), 4) for f in sorted_factors],  # 保留4位小数
-            "risk_contributions": [round(f[1] * 100, 2) for f in sorted_factors]  # 转换为百分比
+            "date": selected_date,
+            "factors": result["factors"],
+            "exposures": result["exposures"],
+            "risk_contributions": result["risk_contributions"]
         })
     except Exception as e:
         import traceback
