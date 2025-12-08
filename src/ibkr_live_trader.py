@@ -1097,8 +1097,15 @@ def main():
         market_data_type=args.market_data_type,
     )
 
-    # 同步调用（如果用户传入的是相对路径，使用 get_path 解析）
-    weights_path = get_path(args.weights, OUTPUT_PORTFOLIOS_DIR) if not Path(args.weights).is_absolute() else Path(args.weights)
+    # 处理权重文件路径
+    # 如果是绝对路径，直接使用；如果是相对路径，基于项目根目录解析
+    if Path(args.weights).is_absolute():
+        weights_path = Path(args.weights)
+    else:
+        # 相对路径：基于项目根目录解析（不使用 OUTPUT_PORTFOLIOS_DIR 作为 base，避免重复拼接）
+        from src.config.path import ROOT_DIR
+        weights_path = (ROOT_DIR / args.weights).resolve()
+    
     trader.run(weights_path, args.capital, args.capital_usage_ratio)
 
 
