@@ -43,9 +43,16 @@ IBKR Live Trader (基于 ib_insync) - 同步版本，稳定可靠
 
 import argparse
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import Dict, Optional
+
+# 添加项目根目录到 sys.path（确保可以导入 src 模块）
+current_file = Path(__file__).resolve()
+project_root = current_file.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 import pandas as pd
 
@@ -1060,7 +1067,7 @@ class IBKRLiveTrader:
 
 
 def main():
-    # 使用统一的路径管理
+    # 使用统一的路径管理（路径已在文件开头设置）
     from src.config.path import OUTPUT_PORTFOLIOS_DIR, get_path
     
     parser = argparse.ArgumentParser(description="IBKR Live Trader (基于 ib_insync，同步版本)")
