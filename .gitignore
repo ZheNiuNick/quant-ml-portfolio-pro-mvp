@@ -43,6 +43,7 @@ duckdb/*
 !outputs/reports/*.json
 !outputs/backtests/*.json
 !outputs/backtests/*.parquet
+!outputs/factor_*.json
 !data/factors/factor_ic_ir.parquet
 
 
