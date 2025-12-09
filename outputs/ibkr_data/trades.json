@@ -1,6 +1,56 @@
 {
-  "timestamp": "20251208_132435",
+  "timestamp": "20251209_151140",
   "trades": [
+    {
+      "time": "2025-12-09 20:05:00",
+      "symbol": "T",
+      "side": "BUY",
+      "quantity": 7.0,
+      "price": 24.46,
+      "amount": 171.22,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-09 20:05:00",
+      "symbol": "BSX",
+      "side": "BUY",
+      "quantity": 1.0,
+      "price": 92.99,
+      "amount": 92.99,
+      "commission": 0.9299,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-09 20:05:00",
+      "symbol": "LRCX",
+      "side": "SELL",
+      "quantity": 1.0,
+      "price": 165.49,
+      "amount": 165.49,
+      "commission": 1.000166,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-09 20:04:59",
+      "symbol": "INTC",
+      "side": "BUY",
+      "quantity": 4.0,
+      "price": 40.13,
+      "amount": 160.52,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-09 20:04:59",
+      "symbol": "MU",
+      "side": "SELL",
+      "quantity": 1.0,
+      "price": 252.01,
+      "amount": 252.01,
+      "commission": 1.000166,
+      "status": "FILLED"
+    },
     {
       "time": "2025-12-08 18:16:05",
       "symbol": "MCK",
@@ -592,7 +642,7 @@
       "status": "FILLED"
     }
   ],
-  "total_trades": 59,
-  "new_trades_today": 12,
+  "total_trades": 64,
+  "new_trades_today": 5,
   "source": "ib_insync"
 }

@@ -18,7 +18,7 @@ import numpy as np
 # 使用统一的路径管理
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.config.path import SETTINGS_FILE, OUTPUT_DIR, DATA_FACTORS_DIR, get_path
+from src.config.path import SETTINGS_FILE, OUTPUT_DIR, DATA_FACTORS_DIR, ROOT_DIR, get_path
 from src.factor_engine import read_prices, forward_return, load_settings as load_factor_settings
 
 SETTINGS = SETTINGS_FILE
@@ -35,10 +35,13 @@ def generate_long_short_performance():
         
         # 读取配置
         factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = get_path(
-            factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"),
-            DATA_FACTORS_DIR
-        )
+        factor_store_rel_path = factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet")
+        # 如果已经是绝对路径，直接使用；否则基于项目根目录解析
+        if Path(factor_store_rel_path).is_absolute():
+            factor_store_path = Path(factor_store_rel_path)
+        else:
+            from src.config.path import ROOT_DIR
+            factor_store_path = (ROOT_DIR / factor_store_rel_path).resolve()
         
         if not factor_store_path.exists():
             print(f"❌ 文件不存在: {factor_store_path}")
@@ -187,10 +190,12 @@ def generate_correlation_matrix():
     
     try:
         factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = get_path(
-            factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"),
-            DATA_FACTORS_DIR
-        )
+        factor_store_rel_path = factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet")
+        # 如果已经是绝对路径，直接使用；否则基于项目根目录解析
+        if Path(factor_store_rel_path).is_absolute():
+            factor_store_path = Path(factor_store_rel_path)
+        else:
+            factor_store_path = (ROOT_DIR / factor_store_rel_path).resolve()
         
         if not factor_store_path.exists():
             print(f"❌ 文件不存在: {factor_store_path}")
@@ -267,10 +272,12 @@ def generate_risk_exposure():
     
     try:
         factor_cfg = load_factor_settings(str(SETTINGS))
-        factor_store_path = get_path(
-            factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet"),
-            DATA_FACTORS_DIR
-        )
+        factor_store_rel_path = factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet")
+        # 如果已经是绝对路径，直接使用；否则基于项目根目录解析
+        if Path(factor_store_rel_path).is_absolute():
+            factor_store_path = Path(factor_store_rel_path)
+        else:
+            factor_store_path = (ROOT_DIR / factor_store_rel_path).resolve()
         
         if not factor_store_path.exists():
             print(f"❌ 文件不存在: {factor_store_path}")

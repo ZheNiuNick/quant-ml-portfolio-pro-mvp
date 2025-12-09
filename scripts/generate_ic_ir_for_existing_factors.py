@@ -22,7 +22,7 @@ warnings.filterwarnings('ignore', message='.*correlation coefficient is not defi
 # 使用统一的路径管理
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.config.path import DATA_FACTORS_DIR, get_path
+from src.config.path import DATA_FACTORS_DIR, ROOT_DIR, get_path
 from src.factor_engine import read_prices, forward_return, daily_rank_ic, load_settings
 
 def generate_ic_ir_for_existing_factors(cfg, start_date=None, end_date=None):
@@ -32,7 +32,13 @@ def generate_ic_ir_for_existing_factors(cfg, start_date=None, end_date=None):
     print("="*60)
     
     # 读取因子数据
-    factor_store_path = get_path(cfg["paths"]["factors_store"], DATA_FACTORS_DIR)
+    factor_store_rel_path = cfg["paths"]["factors_store"]
+    # 如果已经是绝对路径，直接使用；否则基于项目根目录解析
+    if Path(factor_store_rel_path).is_absolute():
+        factor_store_path = Path(factor_store_rel_path)
+    else:
+        factor_store_path = (ROOT_DIR / factor_store_rel_path).resolve()
+    
     if not factor_store_path.exists():
         print(f"[错误] 因子数据文件不存在: {factor_store_path}")
         return
