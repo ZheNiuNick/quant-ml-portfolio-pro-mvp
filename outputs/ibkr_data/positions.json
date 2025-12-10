@@ -1,168 +1,168 @@
 {
-  "timestamp": "20251209_151140",
+  "timestamp": "20251210_133538",
   "positions": [
     {
       "symbol": "BSX",
-      "shares": 103.0,
-      "avg_cost": 98.59228835,
-      "current_price": 93.06,
-      "market_value": 9585.18,
-      "unrealized_pnl": -569.8257000500001
+      "shares": 104.0,
+      "avg_cost": 98.54311730817308,
+      "current_price": 92.53,
+      "market_value": 9623.12,
+      "unrealized_pnl": -625.3642000500002
     },
     {
       "symbol": "LRCX",
       "shares": 59.0,
-      "avg_cost": 157.24639335,
-      "current_price": 165.45,
-      "market_value": 9761.55,
-      "unrealized_pnl": 484.012792349999
+      "avg_cost": 157.2463932,
+      "current_price": 164.91,
+      "market_value": 9729.69,
+      "unrealized_pnl": 452.1528011999998
     },
     {
       "symbol": "PFE",
       "shares": 376.0,
       "avg_cost": 25.495,
-      "current_price": 0.0,
-      "market_value": 0.0,
-      "unrealized_pnl": 0.0
+      "current_price": 25.58,
+      "market_value": 9618.08,
+      "unrealized_pnl": 31.959999999998985
     },
     {
       "symbol": "ABBV",
-      "shares": 42.0,
-      "avg_cost": 229.3197619,
-      "current_price": 223.93,
-      "market_value": 9405.06,
-      "unrealized_pnl": -226.36999979999985
+      "shares": 43.0,
+      "avg_cost": 229.2183721,
+      "current_price": 223.54,
+      "market_value": 9612.22,
+      "unrealized_pnl": -244.1700003000008
     },
     {
       "symbol": "MU",
-      "shares": 39.0,
-      "avg_cost": 240.0155,
-      "current_price": 251.9,
-      "market_value": 9824.1,
-      "unrealized_pnl": 463.4955000000001
+      "shares": 38.0,
+      "avg_cost": 240.0024359,
+      "current_price": 258.67,
+      "market_value": 9829.460000000001,
+      "unrealized_pnl": 709.3674358000007
     },
     {
       "symbol": "RTX",
       "shares": 56.0,
       "avg_cost": 171.44785715,
-      "current_price": 0.0,
-      "market_value": 0.0,
-      "unrealized_pnl": 0.0
+      "current_price": 173.94,
+      "market_value": 9740.64,
+      "unrealized_pnl": 139.55999959999963
     },
     {
       "symbol": "LIN",
       "shares": 24.0,
       "avg_cost": 406.56375,
-      "current_price": 391.71,
-      "market_value": 9401.039999999999,
-      "unrealized_pnl": -356.49000000000115
+      "current_price": 391.18,
+      "market_value": 9388.32,
+      "unrealized_pnl": -369.2100000000005
     },
     {
       "symbol": "ETN",
       "shares": 28.0,
       "avg_cost": 340.5357143,
-      "current_price": 344.08,
-      "market_value": 9634.24,
-      "unrealized_pnl": 99.23999959999969
+      "current_price": 347.02,
+      "market_value": 9716.56,
+      "unrealized_pnl": 181.55999959999963
     },
     {
       "symbol": "INTU",
       "shares": 15.0,
       "avg_cost": 631.24666665,
-      "current_price": 0.0,
-      "market_value": 0.0,
-      "unrealized_pnl": 0.0
+      "current_price": 658.53,
+      "market_value": 9877.949999999999,
+      "unrealized_pnl": 409.2500002500003
     },
     {
       "symbol": "CRWD",
       "shares": 19.0,
       "avg_cost": 507.7726316,
-      "current_price": 0.0,
-      "market_value": 0.0,
-      "unrealized_pnl": 0.0
+      "current_price": 511.7,
+      "market_value": 9722.3,
+      "unrealized_pnl": 74.61999959999957
     },
     {
       "symbol": "TSLA",
       "shares": 21.0,
       "avg_cost": 450.84761905,
-      "current_price": 0.0,
-      "market_value": 0.0,
-      "unrealized_pnl": 0.0
+      "current_price": 446.07,
+      "market_value": 9367.47,
+      "unrealized_pnl": -100.33000004999997
     },
     {
       "symbol": "NVDA",
       "shares": 52.0,
       "avg_cost": 181.1280923,
-      "current_price": 184.32,
-      "market_value": 9584.64,
-      "unrealized_pnl": 165.97920040000008
+      "current_price": 182.75,
+      "market_value": 9503.0,
+      "unrealized_pnl": 84.33920040000044
     },
     {
       "symbol": "IBM",
       "shares": 31.0,
       "avg_cost": 306.0612516,
-      "current_price": 310.62,
-      "market_value": 9629.22,
-      "unrealized_pnl": 141.3212004000004
+      "current_price": 312.71,
+      "market_value": 9694.01,
+      "unrealized_pnl": 206.11120039999963
     },
     {
       "symbol": "DE",
       "shares": 20.0,
       "avg_cost": 477.53,
-      "current_price": 0.0,
-      "market_value": 0.0,
-      "unrealized_pnl": 0.0
+      "current_price": 462.57,
+      "market_value": 9251.4,
+      "unrealized_pnl": -299.1999999999996
     },
     {
       "symbol": "MCK",
       "shares": 12.0,
       "avg_cost": 805.65916665,
-      "current_price": 796.91,
-      "market_value": 9562.92,
-      "unrealized_pnl": -104.98999980000008
+      "current_price": 798.21,
+      "market_value": 9578.52,
+      "unrealized_pnl": -89.38999979999926
     },
     {
       "symbol": "T",
       "shares": 394.0,
       "avg_cost": 25.47437815,
-      "current_price": 24.48,
-      "market_value": 9645.12,
-      "unrealized_pnl": -391.78499109999973
+      "current_price": 24.49,
+      "market_value": 9649.06,
+      "unrealized_pnl": -387.8449911000005
     },
     {
       "symbol": "AMD",
       "shares": 44.0,
       "avg_cost": 216.58272725,
-      "current_price": 221.26,
-      "market_value": 9735.439999999999,
-      "unrealized_pnl": 205.80000099999938
+      "current_price": 219.46,
+      "market_value": 9656.24,
+      "unrealized_pnl": 126.60000100000013
     },
     {
       "symbol": "ORCL",
       "shares": 44.0,
       "avg_cost": 201.2908341,
-      "current_price": 221.37,
-      "market_value": 9740.28,
-      "unrealized_pnl": 883.4832995999997
+      "current_price": 220.05,
+      "market_value": 9682.2,
+      "unrealized_pnl": 825.4032996
     },
     {
       "symbol": "GE",
-      "shares": 33.0,
-      "avg_cost": 293.27363635,
-      "current_price": 0.0,
-      "market_value": 0.0,
-      "unrealized_pnl": 0.0
+      "shares": 34.0,
+      "avg_cost": 292.98058822205877,
+      "current_price": 282.23,
+      "market_value": 9595.82,
+      "unrealized_pnl": -365.5199995499976
     },
     {
       "symbol": "INTC",
       "shares": 240.0,
       "avg_cost": 42.56104165,
-      "current_price": 40.08,
-      "market_value": 9619.199999999999,
-      "unrealized_pnl": -595.4499960000004
+      "current_price": 40.28,
+      "market_value": 9667.2,
+      "unrealized_pnl": -547.4499959999997
     }
   ],
   "total_stocks": 20,
-  "total_value": 125127.98999999999,
+  "total_value": 192503.26,
   "source": "ib_insync"
 }

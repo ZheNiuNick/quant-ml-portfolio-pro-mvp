@@ -1,6 +1,36 @@
 {
-  "timestamp": "20251209_151140",
+  "timestamp": "20251210_133538",
   "trades": [
+    {
+      "time": "2025-12-10 18:31:05",
+      "symbol": "MU",
+      "side": "SELL",
+      "quantity": 1.0,
+      "price": 258.62,
+      "amount": 258.62,
+      "commission": 1.000166,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-10 18:29:40",
+      "symbol": "BSX",
+      "side": "BUY",
+      "quantity": 1.0,
+      "price": 92.55,
+      "amount": 92.55,
+      "commission": 0.9285,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-10 18:29:39",
+      "symbol": "GE",
+      "side": "BUY",
+      "quantity": 1.0,
+      "price": 282.31,
+      "amount": 282.31,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
     {
       "time": "2025-12-09 20:05:00",
       "symbol": "T",
@@ -642,7 +672,7 @@
       "status": "FILLED"
     }
   ],
-  "total_trades": 64,
-  "new_trades_today": 5,
+  "total_trades": 67,
+  "new_trades_today": 3,
   "source": "ib_insync"
 }
