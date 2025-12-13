@@ -134,7 +134,6 @@
                     <label for="correlation-method" class="form-label">Correlation Method:</label>
                     <select id="correlation-method" class="form-select" onchange="loadCorrelationMatrix()">
                         <option value="pearson">Pearson</option>
-                        <option value="spearman">Spearman</option>
                     </select>
                 </div>
                 <div id="correlation-matrix-chart" class="chart-container" style="height: 600px;"></div>
@@ -324,25 +323,47 @@
                 return;
             }
             
+            // Filter out NaN values for plotting
+            const validData = [];
+            const validDates = [];
+            data.icir.forEach((value, index) => {
+                if (value !== null && value !== undefined && !isNaN(value)) {
+                    validData.push(value);
+                    validDates.push(data.dates[index]);
+                }
+            });
+            
+            if (validData.length === 0) {
+                console.warn('Rolling ICIR: No valid data after filtering NaN');
+                document.getElementById('rolling-icir-chart').innerHTML = '<p class="text-muted text-center py-5">No valid ICIR data available</p>';
+                return;
+            }
+            
             const trace = {
-                x: data.dates,
-                y: data.icir,
+                x: validDates,
+                y: validData,
                 type: 'scatter',
                 mode: 'lines',
                 name: 'ICIR',
                 line: { color: '#17a2b8', width: 2 }
             };
             
-            Plotly.newPlot('rolling-icir-chart', [trace], {
-                title: 'Rolling ICIR',
-                xaxis: { title: 'Date' },
-                yaxis: { title: 'ICIR Value' },
-                hovermode: 'x unified',
-                template: 'plotly_white'
-            });
+            const chartEl = document.getElementById('rolling-icir-chart');
+            if (chartEl) {
+                Plotly.newPlot('rolling-icir-chart', [trace], {
+                    title: 'Rolling ICIR',
+                    xaxis: { title: 'Date' },
+                    yaxis: { title: 'ICIR Value' },
+                    hovermode: 'x unified',
+                    template: 'plotly_white'
+                });
+            }
         } catch (error) {
             console.error('Rolling ICIR Failed to load:', error);
-            document.getElementById('rolling-icir-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
+            const chartEl = document.getElementById('rolling-icir-chart');
+            if (chartEl) {
+                chartEl.innerHTML = '<p class="text-danger text-center py-5">Failed to load: ' + (error.message || 'Unknown error') + '</p>';
+            }
         }
     }
 
@@ -608,6 +629,70 @@
         });
         tableHtml += '</tbody></table>';
         document.getElementById('factor-cluster-table').innerHTML = tableHtml;
+        
+        // Add explanation section
+        const explanationHtml = `
+            <div class="mt-4 p-4 bg-light rounded">
+                <h5><i class="fas fa-info-circle me-2"></i>Factor Cluster Analysis Interpretation</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-chart-line me-2"></i>📈 Momentum Factors</h6>
+                        <p class="small mb-3">
+                            Momentum factors capture the tendency of stock prices to continue their trends. 
+                            Factors include past N-day returns, relative strength indicators, and price trend patterns. 
+                            <strong>High IC values</strong> indicate that stocks with strong past performance are more likely 
+                            to continue outperforming. These factors work best when market trends are persistent.
+                        </p>
+                        
+                        <h6 class="text-purple"><i class="fas fa-gem me-2"></i>💎 Quality Factors</h6>
+                        <p class="small mb-3">
+                            Quality factors measure a company's financial health and profitability, including ROE, ROA, 
+                            profit margins, debt ratios, and earnings stability. High-quality companies typically deliver 
+                            better long-term returns with lower volatility. <strong>Consistently positive IC</strong> suggests 
+                            that fundamental quality is rewarded over time, suitable for long-term holding strategies.
+                        </p>
+                        
+                        <h6 class="text-warning"><i class="fas fa-wave-square me-2"></i>📊 Volatility Factors</h6>
+                        <p class="small mb-3">
+                            Volatility factors reflect price uncertainty and risk. Low volatility stocks tend to have 
+                            lower risk but may miss high-return opportunities. These include historical volatility, 
+                            downside volatility, and risk-adjusted returns. <strong>Negative IC</strong> may indicate 
+                            market preference for low-volatility stocks (risk-aversion behavior).
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-dollar-sign me-2"></i>💰 Value Factors</h6>
+                        <p class="small mb-3">
+                            Value factors identify undervalued stocks using valuation metrics like P/E, P/B, EV/EBITDA, 
+                            and price-to-sales ratios. Value investing seeks stocks trading below their intrinsic value. 
+                            <strong>Positive IC</strong> suggests mean reversion exists - cheap stocks tend to appreciate 
+                            as the market corrects mispricing over time.
+                        </p>
+                        
+                        <h6 class="text-danger"><i class="fas fa-building me-2"></i>🏢 Size Factors</h6>
+                        <p class="small mb-3">
+                            Size factors measure company market capitalization. Small-cap stocks typically exhibit higher 
+                            volatility and potential returns due to the small-cap premium effect observed in long-term data. 
+                            However, <strong>size effects vary with market cycles</strong> - large caps may outperform 
+                            during risk-off periods, while small caps excel during risk-on periods.
+                        </p>
+                        
+                        <h6><i class="fas fa-chart-area me-2"></i>Chart Interpretation Guide</h6>
+                        <ul class="small">
+                            <li><strong>X-axis (Mean IC)</strong>: Correlation between factor and future returns. 
+                                Absolute value indicates predictive power; higher = stronger signal.</li>
+                            <li><strong>Y-axis (ICIR)</strong>: Information Ratio = IC mean / IC std, measuring 
+                                factor stability over time. Higher ICIR = more consistent performance.</li>
+                            <li><strong>Top-right quadrant</strong>: Ideal region with both high IC and high ICIR, 
+                                indicating effective and stable factors worth including in strategies.</li>
+                            <li><strong>t-stat</strong>: Statistical significance. |t-stat| > 2 typically indicates 
+                                significant factor performance (95% confidence level).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('factor-cluster-table').insertAdjacentHTML('afterend', explanationHtml);
         } catch (error) {
             console.error('Factor Clusters AnalysisFailed to load:', error);
             document.getElementById('factor-cluster-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
@@ -665,12 +750,18 @@
                         document.getElementById('exposure-date').value = data.date;
                         date = data.date;
                     } else {
-                        document.getElementById('risk-exposure-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
+                        const chartEl = document.getElementById('risk-exposure-chart');
+                        if (chartEl) {
+                            chartEl.innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
+                        }
                         return; // Cannot get date, skip loading
                     }
                 } catch (e) {
                     console.error('Failed to get latest date:', e);
-                    document.getElementById('risk-exposure-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
+                    const chartEl = document.getElementById('risk-exposure-chart');
+                    if (chartEl) {
+                        chartEl.innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
+                    }
                     return;
                 }
             }
@@ -686,6 +777,15 @@
                 return;
             }
             
+            const chartEl = document.getElementById('risk-exposure-chart');
+            if (!chartEl) {
+                console.error('Risk exposure chart element not found');
+                return;
+            }
+            
+            // Clear any existing error messages
+            chartEl.innerHTML = '';
+            
             const trace = {
                 x: data.factors,
                 y: data.exposures,
@@ -700,7 +800,7 @@
                 template: 'plotly_white'
             });
             
-            // 
+            // Show risk exposure table
             let tableHtml = '<table class="table table-striped"><thead><tr><th>Factor</th><th>Exposure</th><th>Risk Contribution</th></tr></thead><tbody>';
             data.factors.forEach((factor, idx) => {
                 // Risk contribution is already in percentage from backend (0-100), no need to multiply by 100
@@ -713,6 +813,60 @@
             });
             tableHtml += '</tbody></table>';
             document.getElementById('risk-exposure-table').innerHTML = tableHtml;
+            
+            // Add explanation section
+            const explanationHtml = `
+                <div class="mt-4 p-4 bg-light rounded">
+                    <h6><i class="fas fa-info-circle me-2"></i>Multi-Factor Risk Exposure (Barra-style) Interpretation</h6>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6><i class="fas fa-chart-bar me-2"></i>What is Risk Exposure?</h6>
+                            <p class="small mb-3">
+                                Risk exposure measures how sensitive the portfolio is to different risk factors. 
+                                Similar to Barra's risk model, this analysis breaks down portfolio risk into 
+                                contributions from various factors (momentum, quality, volatility, value, size, etc.).
+                            </p>
+                            
+                            <h6><i class="fas fa-arrow-up me-2"></i>Positive Exposure</h6>
+                            <p class="small mb-3">
+                                A <strong>positive exposure</strong> (green bars) indicates the portfolio is 
+                                overweight in that factor. For example, a positive momentum exposure means the 
+                                portfolio holds more high-momentum stocks than the benchmark. This can be 
+                                intentional if the strategy aims to capture momentum effects.
+                            </p>
+                            
+                            <h6><i class="fas fa-arrow-down me-2"></i>Negative Exposure</h6>
+                            <p class="small mb-3">
+                                A <strong>negative exposure</strong> (red bars) indicates the portfolio is 
+                                underweight in that factor. For example, a negative value exposure means the 
+                                portfolio holds fewer value stocks than the benchmark, preferring growth stocks instead.
+                            </p>
+                            
+                            <h6><i class="fas fa-percentage me-2"></i>Risk Contribution</h6>
+                            <p class="small mb-3">
+                                <strong>Risk Contribution (%)</strong> shows what percentage of the portfolio's 
+                                total risk comes from each factor. Factors with higher risk contributions should 
+                                be closely monitored, as they drive most of the portfolio's volatility. A 
+                                well-diversified portfolio typically has risk contributions spread across 
+                                multiple factors rather than concentrated in one or two.
+                            </p>
+                            
+                            <h6><i class="fas fa-lightbulb me-2"></i>How to Use This Analysis</h6>
+                            <ul class="small">
+                                <li><strong>Identify Concentration Risk:</strong> If one factor accounts for >50% 
+                                    of risk contribution, consider diversifying to reduce concentration.</li>
+                                <li><strong>Monitor Factor Drift:</strong> Track exposure changes over time to 
+                                    ensure the portfolio stays aligned with the intended strategy.</li>
+                                <li><strong>Factor Timing:</strong> Adjust exposures based on market conditions 
+                                    (e.g., increase quality exposure during market stress).</li>
+                                <li><strong>Rebalancing Signal:</strong> Large exposure changes may indicate 
+                                    the need for portfolio rebalancing to maintain target factor weights.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('risk-exposure-table').insertAdjacentHTML('afterend', explanationHtml);
         } catch (error) {
             console.error('Risk exposure failed to load:', error);
             document.getElementById('risk-exposure-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';

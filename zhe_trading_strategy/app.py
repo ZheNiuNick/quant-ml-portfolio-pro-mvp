@@ -1863,7 +1863,7 @@ def positions_explanation():
             {
                 "step": 6,
                 "title": "Portfolio Optimization",
-                "description": "Use TopK Dropout Strategy: select 20 stocks with highest prediction scores, replace 3 stocks daily"
+                "description": "Use TopK Dropout Strategy: select 20 stocks with highest prediction scores, rebalance all 20 stocks daily (full rebalance strategy)"
             },
             {
                 "step": 7,
@@ -2190,6 +2190,29 @@ def ibkr_pnl():
         
         trader.connect()
         
+        # 检测账户类型（Paper Trading vs Real Money）
+        account_type = "Unknown"
+        account_id = None
+        
+        # 通过端口判断（7497=Paper, 7496=Live）
+        if IBKR_CONFIG.get('port', 7497) == 7497:
+            account_type = "Paper Trading"
+        elif IBKR_CONFIG.get('port', 7497) == 7496:
+            account_type = "Real Money"
+        else:
+            account_type = f"Port {IBKR_CONFIG.get('port', 7497)}"
+        
+        # 尝试从账户信息中获取账户ID
+        try:
+            account_summary = trader.ib.accountSummary()
+            if account_summary:
+                account_id = account_summary[0].account
+                # 检查账户ID是否包含paper/demo等关键词
+                if account_id and ('paper' in account_id.lower() or 'demo' in account_id.lower() or 'sim' in account_id.lower()):
+                    account_type = "Paper Trading"
+        except:
+            pass
+        
         # 获取账户价值（从 IBKR 账本）
         account_values = trader.ib.accountValues()
         
@@ -2312,11 +2335,19 @@ def ibkr_pnl():
         
         trader.disconnect()
         
+        # 计算总盈亏和盈亏百分比
+        total_profit_loss = realized_pnl + unrealized_pnl
+        profit_loss_percent = (total_profit_loss / net_liquidation * 100) if net_liquidation > 0 else 0.0
+        
         return jsonify({
             "error": None,
+            "account_type": account_type,
+            "account_id": account_id,
             "realized_pnl": realized_pnl,
             "unrealized_pnl": unrealized_pnl,
             "total_pnl": total_pnl,
+            "total_profit_loss": total_profit_loss,
+            "profit_loss_percent": profit_loss_percent,
             "net_liquidation": net_liquidation,
             "buying_power": buying_power,
             "cash": cash,

@@ -33,7 +33,24 @@
 
                 <!-- Trading Statistics -->
                 <div class="row mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <div class="card text-center bg-light">
+                            <div class="card-body">
+                                <h5 class="text-muted">Account Type</h5>
+                                <h6 id="account-type">-</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="text-white">Total P&L</h5>
+                                <h3 id="total-pnl">$-</h3>
+                                <small id="pnl-percent">-%</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <div class="card text-center bg-light">
                             <div class="card-body">
                                 <h5 class="text-muted">Total Trades</h5>
@@ -41,7 +58,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-center bg-light">
                             <div class="card-body">
                                 <h5 class="text-muted">Buy Orders</h5>
@@ -49,7 +66,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-center bg-light">
                             <div class="card-body">
                                 <h5 class="text-muted">Sell Orders</h5>
@@ -57,7 +74,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card text-center bg-light">
                             <div class="card-body">
                                 <h5 class="text-muted">Total Value</h5>
@@ -205,8 +222,57 @@
         return statusMap[status] || 'bg-secondary';
     }
 
+    // Load account type and P&L statistics
+    function loadAccountStats() {
+        const url = API_BASE_URL ? `${API_BASE_URL}/api/ibkr/pnl` : '/api/ibkr/pnl';
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error && data.source === 'ibkr') {
+                    // Display account type
+                    const accountType = data.account_type || 'Unknown';
+                    const accountTypeBadge = accountType === 'Paper Trading' 
+                        ? '<span class="badge bg-warning text-dark">Paper Trading</span>'
+                        : accountType === 'Real Money'
+                        ? '<span class="badge bg-danger">Real Money</span>'
+                        : `<span class="badge bg-secondary">${accountType}</span>`;
+                    document.getElementById('account-type').innerHTML = accountTypeBadge;
+                    
+                    // Display P&L statistics
+                    const totalPnL = data.total_profit_loss !== undefined 
+                        ? data.total_profit_loss 
+                        : (data.realized_pnl + data.unrealized_pnl);
+                    const pnlPercent = data.profit_loss_percent !== undefined
+                        ? data.profit_loss_percent
+                        : (data.net_liquidation > 0 ? (totalPnL / data.net_liquidation * 100) : 0);
+                    
+                    const pnlElement = document.getElementById('total-pnl');
+                    const percentElement = document.getElementById('pnl-percent');
+                    
+                    pnlElement.textContent = `$${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}`;
+                    pnlElement.className = totalPnL >= 0 ? 'text-white' : 'text-warning';
+                    
+                    percentElement.textContent = `${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%`;
+                    percentElement.className = pnlPercent >= 0 ? 'text-white' : 'text-warning';
+                } else {
+                    document.getElementById('account-type').innerHTML = '<span class="badge bg-secondary">N/A</span>';
+                    document.getElementById('total-pnl').textContent = '$-';
+                    document.getElementById('pnl-percent').textContent = '-%';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading account stats:', error);
+                document.getElementById('account-type').innerHTML = '<span class="badge bg-secondary">N/A</span>';
+                document.getElementById('total-pnl').textContent = '$-';
+                document.getElementById('pnl-percent').textContent = '-%';
+            });
+    }
+
     // Auto-load on page load
-    window.addEventListener('DOMContentLoaded', loadTrades);
+    window.addEventListener('DOMContentLoaded', () => {
+        loadTrades();
+        loadAccountStats();
+    });
 </script>
 {% endblock %}
 
