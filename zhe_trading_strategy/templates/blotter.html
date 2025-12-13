@@ -95,12 +95,14 @@
                                 <th>Quantity</th>
                                 <th>Price</th>
                                 <th>Amount</th>
+                                <th>P&L</th>
+                                <th>P&L %</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="trades-table-body">
                             <tr>
-                                <td colspan="7" class="text-center text-muted">Loading...</td>
+                                <td colspan="9" class="text-center text-muted">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -126,7 +128,7 @@
         if (params.toString()) url += '?' + params.toString();
         
         const tbody = document.getElementById('trades-table-body');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Loading...</td></tr>';
         
         fetch(url)
             .then(response => response.json())
@@ -134,10 +136,10 @@
                 if (data.error) {
                     if (data.error === "No data available") {
                         tbody.innerHTML = 
-                            '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>';
+                            '<tr><td colspan="9" class="text-center text-muted">No data available</td></tr>';
                     } else {
                         tbody.innerHTML = 
-                            '<tr><td colspan="7" class="text-center text-danger">Failed to load data, please check backend service</td></tr>';
+                            '<tr><td colspan="9" class="text-center text-danger">Failed to load data, please check backend service</td></tr>';
                     }
                     document.getElementById('total-trades').textContent = '0';
                     document.getElementById('buy-orders').textContent = '0';
@@ -151,7 +153,7 @@
                     updateStats(data.trades);
                 } else {
                     tbody.innerHTML = 
-                        '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>';
+                        '<tr><td colspan="9" class="text-center text-muted">No data available</td></tr>';
                     document.getElementById('total-trades').textContent = '0';
                     document.getElementById('buy-orders').textContent = '0';
                     document.getElementById('sell-orders').textContent = '0';
@@ -161,7 +163,7 @@
             .catch(error => {
                 console.error('Error loading trades:', error);
                 tbody.innerHTML = 
-                    '<tr><td colspan="7" class="text-center text-danger">Failed to load data, please check backend service</td></tr>';
+                    '<tr><td colspan="9" class="text-center text-danger">Failed to load data, please check backend service</td></tr>';
                 document.getElementById('total-trades').textContent = '0';
                 document.getElementById('buy-orders').textContent = '0';
                 document.getElementById('sell-orders').textContent = '0';
@@ -178,18 +180,38 @@
             const price = trade.price || 0;
             const amount = trade.amount || trade.value || (qty * price);
             
+            // P&L 信息
+            const tradePnl = trade.trade_pnl || 0;
+            const tradePnlPercent = trade.trade_pnl_percent || 0;
+            const pnlType = trade.pnl_type || "N/A";
+            const pnlClass = tradePnl >= 0 ? 'text-success' : 'text-danger';
+            const pnlSign = tradePnl >= 0 ? '+' : '';
+            
+            // P&L 显示文本
+            let pnlDisplay = '-';
+            let pnlPercentDisplay = '-';
+            if (pnlType !== "N/A" && (tradePnl !== 0 || tradePnlPercent !== 0)) {
+                pnlDisplay = `${pnlSign}$${Math.abs(tradePnl).toFixed(2)}`;
+                pnlPercentDisplay = `${pnlSign}${Math.abs(tradePnlPercent).toFixed(2)}%`;
+            }
+            
             return `
             <tr>
                 <td>${trade.time || '-'}</td>
                 <td><strong>${symbol}</strong></td>
                 <td>
-                    <span class="badge ${side === 'BUY' ? 'bg-success' : 'bg-danger'}">
+                    <span class="badge ${side === 'BUY' || side === 'BOT' ? 'bg-success' : 'bg-danger'}">
                         ${side}
                     </span>
                 </td>
                 <td>${qty.toFixed(2)}</td>
                 <td>$${price > 0 ? price.toFixed(2) : '-'}</td>
                 <td>$${amount > 0 ? amount.toFixed(2) : '-'}</td>
+                <td class="${pnlClass}">
+                    ${pnlDisplay}
+                    ${pnlType !== "N/A" ? `<small class="d-block text-muted">${pnlType}</small>` : ''}
+                </td>
+                <td class="${pnlClass}">${pnlPercentDisplay}</td>
                 <td>
                     <span class="badge ${getStatusBadgeClass(trade.status)}">
                         ${trade.status || 'FILLED'}
@@ -228,7 +250,8 @@
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                if (!data.error && data.source === 'ibkr') {
+                // 支持从文件或实时连接获取的数据
+                if (!data.error && (data.source === 'ibkr' || data.source === 'file')) {
                     // Display account type
                     const accountType = data.account_type || 'Unknown';
                     const accountTypeBadge = accountType === 'Paper Trading' 
@@ -241,7 +264,7 @@
                     // Display P&L statistics
                     const totalPnL = data.total_profit_loss !== undefined 
                         ? data.total_profit_loss 
-                        : (data.realized_pnl + data.unrealized_pnl);
+                        : (data.realized_pnl || 0) + (data.unrealized_pnl || 0);
                     const pnlPercent = data.profit_loss_percent !== undefined
                         ? data.profit_loss_percent
                         : (data.net_liquidation > 0 ? (totalPnL / data.net_liquidation * 100) : 0);

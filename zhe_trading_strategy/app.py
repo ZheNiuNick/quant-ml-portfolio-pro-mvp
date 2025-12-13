@@ -2163,14 +2163,47 @@ def performance_summary():
 
 @app.route('/api/ibkr/pnl')
 def ibkr_pnl():
-    """获取 IBKR 真实收益数据（PnL/Ledger）- 使用 src/ibkr_live_trader.py"""
+    """获取 IBKR 真实收益数据（PnL/Ledger）- 优先从文件读取，否则使用实时连接"""
+    # 优先从文件读取（如果存在）
+    ibkr_pnl_file = OUTPUT_IBKR_DATA_DIR / "pnl.json"
+    if ibkr_pnl_file.exists():
+        try:
+            with open(ibkr_pnl_file, 'r', encoding='utf-8') as f:
+                pnl_data = json.load(f)
+            # 确保包含所有必需字段
+            if "account_type" not in pnl_data:
+                pnl_data["account_type"] = "Unknown"
+            if "account_id" not in pnl_data:
+                pnl_data["account_id"] = None
+            if "total_profit_loss" not in pnl_data:
+                total_profit_loss = pnl_data.get("realized_pnl", 0.0) + pnl_data.get("unrealized_pnl", 0.0)
+                pnl_data["total_profit_loss"] = total_profit_loss
+            if "profit_loss_percent" not in pnl_data:
+                net_liq = pnl_data.get("net_liquidation", 0.0)
+                profit_loss_percent = (pnl_data["total_profit_loss"] / net_liq * 100) if net_liq > 0 else 0.0
+                pnl_data["profit_loss_percent"] = profit_loss_percent
+            return jsonify({
+                "error": None,
+                **pnl_data,
+                "source": "file"
+            })
+        except Exception as e:
+            print(f"[Warn] Failed to load IBKR PnL from file: {e}")
+            # 继续尝试实时连接
+    
+    # 如果没有文件或读取失败，尝试实时连接
     if not IBKR_CONFIG.get('enabled', False):
         return jsonify({
             "error": "IBKR 未启用",
+            "account_type": "Unknown",
+            "account_id": None,
             "realized_pnl": 0.0,
             "unrealized_pnl": 0.0,
             "total_pnl": 0.0,
-            "daily_pnl": []
+            "total_profit_loss": 0.0,
+            "profit_loss_percent": 0.0,
+            "daily_pnl": [],
+            "source": "backtest"
         }), 200
     
     if not IBKR_AVAILABLE:

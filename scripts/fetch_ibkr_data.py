@@ -104,9 +104,34 @@ def fetch_trades(trader):
 def fetch_pnl(trader):
     """获取收益数据"""
     try:
+        # 检测账户类型（Paper Trading vs Real Money）
+        account_type = "Unknown"
+        account_id = None
+        
+        # 通过端口判断（7497=Paper, 7496=Live）
+        if IBKR_PORT == 7497:
+            account_type = "Paper Trading"
+        elif IBKR_PORT == 7496:
+            account_type = "Real Money"
+        else:
+            account_type = f"Port {IBKR_PORT}"
+        
+        # 尝试从账户信息中获取账户ID
+        try:
+            account_summary = trader.ib.accountSummary()
+            if account_summary:
+                account_id = account_summary[0].account
+                # 检查账户ID是否包含paper/demo等关键词
+                if account_id and ('paper' in account_id.lower() or 'demo' in account_id.lower() or 'sim' in account_id.lower()):
+                    account_type = "Paper Trading"
+        except:
+            pass
+        
         account_values = trader.ib.accountValues()
         
         pnl_data = {
+            "account_type": account_type,
+            "account_id": account_id,
             "realized_pnl": 0.0,
             "unrealized_pnl": 0.0,
             "total_pnl": 0.0,
@@ -143,6 +168,12 @@ def fetch_pnl(trader):
                 pnl_data["buying_power"] = value
             elif tag == "CashBalance":
                 pnl_data["cash"] = value
+        
+        # 计算总盈亏和盈亏百分比
+        total_profit_loss = pnl_data["realized_pnl"] + pnl_data["unrealized_pnl"]
+        profit_loss_percent = (total_profit_loss / pnl_data["net_liquidation"] * 100) if pnl_data["net_liquidation"] > 0 else 0.0
+        pnl_data["total_profit_loss"] = total_profit_loss
+        pnl_data["profit_loss_percent"] = profit_loss_percent
         
         # 获取持仓的未实现盈亏
         for pos in trader.ib.positions():
