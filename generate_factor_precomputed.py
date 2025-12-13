@@ -331,11 +331,11 @@ def generate_risk_exposure():
                     for factor_name in risk_contributions:
                         risk_contributions[factor_name] = risk_contributions[factor_name] / total_risk
                 
-                # 计算平均暴露度
-                avg_exposures = {name: float(exp.abs().mean()) for name, exp in exposures.items()}
+                # 计算平均暴露度（保留正负号，不使用绝对值）
+                avg_exposures = {name: float(exp.mean()) for name, exp in exposures.items()}
                 
-                # 排序（按风险贡献）
-                sorted_factors = sorted(risk_contributions.items(), key=lambda x: x[1], reverse=True)[:30]
+                # 排序（按风险贡献，取前50个以显示更多因子，包括正负暴露）
+                sorted_factors = sorted(risk_contributions.items(), key=lambda x: x[1], reverse=True)[:50]
                 
                 results[date_obj.strftime("%Y-%m-%d")] = {
                     "factors": [f[0] for f in sorted_factors],
