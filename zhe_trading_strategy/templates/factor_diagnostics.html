@@ -121,6 +121,7 @@
             <div class="card-body">
                 <div id="factor-cluster-chart" class="chart-container"></div>
                 <div id="factor-cluster-table" class="mt-3"></div>
+                <div id="factor-cluster-explanation"></div>
             </div>
         </div>
 
@@ -152,6 +153,7 @@
                 </div>
                 <div id="risk-exposure-chart" class="chart-container"></div>
                 <div id="risk-exposure-table" class="mt-3"></div>
+                <div id="risk-exposure-explanation"></div>
             </div>
         </div>
     </div>
@@ -557,6 +559,7 @@
                 console.warn('Factor Clusters Analysis data is empty:', data.error || 'No data');
                 document.getElementById('factor-cluster-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
                 document.getElementById('factor-cluster-table').innerHTML = '';
+                document.getElementById('factor-cluster-explanation').innerHTML = '';
                 return;
             }
         
@@ -630,73 +633,107 @@
         tableHtml += '</tbody></table>';
         document.getElementById('factor-cluster-table').innerHTML = tableHtml;
         
-        // Add explanation section
+        // Build explanation section dynamically based on existing categories
+        const categoryDescriptions = {
+            'momentum': {
+                icon: 'fa-chart-line',
+                emoji: '📈',
+                title: 'Momentum Factors',
+                class: 'text-primary',
+                description: 'Momentum factors capture the tendency of stock prices to continue their trends. Factors include past N-day returns, relative strength indicators, and price trend patterns. <strong>High IC values</strong> indicate that stocks with strong past performance are more likely to continue outperforming. These factors work best when market trends are persistent.'
+            },
+            'quality': {
+                icon: 'fa-gem',
+                emoji: '💎',
+                title: 'Quality Factors',
+                class: 'text-purple',
+                description: 'Quality factors measure a company\'s financial health and profitability, including ROE, ROA, profit margins, debt ratios, and earnings stability. High-quality companies typically deliver better long-term returns with lower volatility. <strong>Consistently positive IC</strong> suggests that fundamental quality is rewarded over time, suitable for long-term holding strategies.'
+            },
+            'volatility': {
+                icon: 'fa-wave-square',
+                emoji: '📊',
+                title: 'Volatility Factors',
+                class: 'text-warning',
+                description: 'Volatility factors reflect price uncertainty and risk. Low volatility stocks tend to have lower risk but may miss high-return opportunities. These include historical volatility, downside volatility, and risk-adjusted returns. <strong>Negative IC</strong> may indicate market preference for low-volatility stocks (risk-aversion behavior).'
+            },
+            'value': {
+                icon: 'fa-dollar-sign',
+                emoji: '💰',
+                title: 'Value Factors',
+                class: 'text-success',
+                description: 'Value factors identify undervalued stocks using valuation metrics like P/E, P/B, EV/EBITDA, and price-to-sales ratios. Value investing seeks stocks trading below their intrinsic value. <strong>Positive IC</strong> suggests mean reversion exists - cheap stocks tend to appreciate as the market corrects mispricing over time.'
+            },
+            'size': {
+                icon: 'fa-building',
+                emoji: '🏢',
+                title: 'Size Factors',
+                class: 'text-danger',
+                description: 'Size factors measure company market capitalization. Small-cap stocks typically exhibit higher volatility and potential returns due to the small-cap premium effect observed in long-term data. However, <strong>size effects vary with market cycles</strong> - large caps may outperform during risk-off periods, while small caps excel during risk-on periods.'
+            }
+        };
+        
+        // Find which categories actually exist in the data
+        const existingCategories = categories.filter(cat => {
+            const factors = data.clusters[cat] || [];
+            return factors.length > 0;
+        });
+        
+        // Build explanation HTML only for existing categories
+        let leftColumnHtml = '';
+        let rightColumnHtml = '';
+        
+        existingCategories.forEach((category, index) => {
+            const desc = categoryDescriptions[category];
+            if (!desc) return; // Skip if description not defined
+            
+            const categoryHtml = `
+                <h6 class="${desc.class}"><i class="fas ${desc.icon} me-2"></i>${desc.emoji} ${desc.title}</h6>
+                <p class="small mb-3">${desc.description}</p>
+            `;
+            
+            // Distribute categories between left and right columns
+            if (index < Math.ceil(existingCategories.length / 2)) {
+                leftColumnHtml += categoryHtml;
+            } else {
+                rightColumnHtml += categoryHtml;
+            }
+        });
+        
+        // Add chart interpretation guide to the right column
+        rightColumnHtml += `
+            <h6><i class="fas fa-chart-area me-2"></i>Chart Interpretation Guide</h6>
+            <ul class="small">
+                <li><strong>X-axis (Mean IC)</strong>: Correlation between factor and future returns. 
+                    Absolute value indicates predictive power; higher = stronger signal.</li>
+                <li><strong>Y-axis (ICIR)</strong>: Information Ratio = IC mean / IC std, measuring 
+                    factor stability over time. Higher ICIR = more consistent performance.</li>
+                <li><strong>Top-right quadrant</strong>: Ideal region with both high IC and high ICIR, 
+                    indicating effective and stable factors worth including in strategies.</li>
+                <li><strong>t-stat</strong>: Statistical significance. |t-stat| > 2 typically indicates 
+                    significant factor performance (95% confidence level).</li>
+            </ul>
+        `;
+        
+        // Build final explanation HTML
         const explanationHtml = `
             <div class="mt-4 p-4 bg-light rounded">
                 <h5><i class="fas fa-info-circle me-2"></i>Factor Cluster Analysis Interpretation</h5>
                 <div class="row">
                     <div class="col-md-6">
-                        <h6 class="text-primary"><i class="fas fa-chart-line me-2"></i>📈 Momentum Factors</h6>
-                        <p class="small mb-3">
-                            Momentum factors capture the tendency of stock prices to continue their trends. 
-                            Factors include past N-day returns, relative strength indicators, and price trend patterns. 
-                            <strong>High IC values</strong> indicate that stocks with strong past performance are more likely 
-                            to continue outperforming. These factors work best when market trends are persistent.
-                        </p>
-                        
-                        <h6 class="text-purple"><i class="fas fa-gem me-2"></i>💎 Quality Factors</h6>
-                        <p class="small mb-3">
-                            Quality factors measure a company's financial health and profitability, including ROE, ROA, 
-                            profit margins, debt ratios, and earnings stability. High-quality companies typically deliver 
-                            better long-term returns with lower volatility. <strong>Consistently positive IC</strong> suggests 
-                            that fundamental quality is rewarded over time, suitable for long-term holding strategies.
-                        </p>
-                        
-                        <h6 class="text-warning"><i class="fas fa-wave-square me-2"></i>📊 Volatility Factors</h6>
-                        <p class="small mb-3">
-                            Volatility factors reflect price uncertainty and risk. Low volatility stocks tend to have 
-                            lower risk but may miss high-return opportunities. These include historical volatility, 
-                            downside volatility, and risk-adjusted returns. <strong>Negative IC</strong> may indicate 
-                            market preference for low-volatility stocks (risk-aversion behavior).
-                        </p>
+                        ${leftColumnHtml}
                     </div>
                     <div class="col-md-6">
-                        <h6 class="text-success"><i class="fas fa-dollar-sign me-2"></i>💰 Value Factors</h6>
-                        <p class="small mb-3">
-                            Value factors identify undervalued stocks using valuation metrics like P/E, P/B, EV/EBITDA, 
-                            and price-to-sales ratios. Value investing seeks stocks trading below their intrinsic value. 
-                            <strong>Positive IC</strong> suggests mean reversion exists - cheap stocks tend to appreciate 
-                            as the market corrects mispricing over time.
-                        </p>
-                        
-                        <h6 class="text-danger"><i class="fas fa-building me-2"></i>🏢 Size Factors</h6>
-                        <p class="small mb-3">
-                            Size factors measure company market capitalization. Small-cap stocks typically exhibit higher 
-                            volatility and potential returns due to the small-cap premium effect observed in long-term data. 
-                            However, <strong>size effects vary with market cycles</strong> - large caps may outperform 
-                            during risk-off periods, while small caps excel during risk-on periods.
-                        </p>
-                        
-                        <h6><i class="fas fa-chart-area me-2"></i>Chart Interpretation Guide</h6>
-                        <ul class="small">
-                            <li><strong>X-axis (Mean IC)</strong>: Correlation between factor and future returns. 
-                                Absolute value indicates predictive power; higher = stronger signal.</li>
-                            <li><strong>Y-axis (ICIR)</strong>: Information Ratio = IC mean / IC std, measuring 
-                                factor stability over time. Higher ICIR = more consistent performance.</li>
-                            <li><strong>Top-right quadrant</strong>: Ideal region with both high IC and high ICIR, 
-                                indicating effective and stable factors worth including in strategies.</li>
-                            <li><strong>t-stat</strong>: Statistical significance. |t-stat| > 2 typically indicates 
-                                significant factor performance (95% confidence level).</li>
-                        </ul>
+                        ${rightColumnHtml}
                     </div>
                 </div>
             </div>
         `;
-        document.getElementById('factor-cluster-table').insertAdjacentHTML('afterend', explanationHtml);
+        document.getElementById('factor-cluster-explanation').innerHTML = explanationHtml;
         } catch (error) {
             console.error('Factor Clusters AnalysisFailed to load:', error);
             document.getElementById('factor-cluster-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
             document.getElementById('factor-cluster-table').innerHTML = '';
+            document.getElementById('factor-cluster-explanation').innerHTML = '';
         }
     }
 
@@ -754,6 +791,8 @@
                         if (chartEl) {
                             chartEl.innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
                         }
+                        document.getElementById('risk-exposure-table').innerHTML = '';
+                        document.getElementById('risk-exposure-explanation').innerHTML = '';
                         return; // Cannot get date, skip loading
                     }
                 } catch (e) {
@@ -762,6 +801,8 @@
                     if (chartEl) {
                         chartEl.innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
                     }
+                    document.getElementById('risk-exposure-table').innerHTML = '';
+                    document.getElementById('risk-exposure-explanation').innerHTML = '';
                     return;
                 }
             }
@@ -774,6 +815,7 @@
                 console.warn('Risk exposure data is empty:', data.error || 'No data');
                 document.getElementById('risk-exposure-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
                 document.getElementById('risk-exposure-table').innerHTML = '';
+                document.getElementById('risk-exposure-explanation').innerHTML = '';
                 return;
             }
             
@@ -814,7 +856,7 @@
             tableHtml += '</tbody></table>';
             document.getElementById('risk-exposure-table').innerHTML = tableHtml;
             
-            // Add explanation section
+            // Add/update explanation section (replace existing content to avoid duplicates)
             const explanationHtml = `
                 <div class="mt-4 p-4 bg-light rounded">
                     <h6><i class="fas fa-info-circle me-2"></i>Multi-Factor Risk Exposure (Barra-style) Interpretation</h6>
@@ -866,11 +908,12 @@
                     </div>
                 </div>
             `;
-            document.getElementById('risk-exposure-table').insertAdjacentHTML('afterend', explanationHtml);
+            document.getElementById('risk-exposure-explanation').innerHTML = explanationHtml;
         } catch (error) {
             console.error('Risk exposure failed to load:', error);
             document.getElementById('risk-exposure-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
             document.getElementById('risk-exposure-table').innerHTML = '';
+            document.getElementById('risk-exposure-explanation').innerHTML = '';
         }
     }
 </script>
