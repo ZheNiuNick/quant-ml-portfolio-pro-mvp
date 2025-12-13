@@ -731,18 +731,21 @@ def rolling_icir():
         daily_stats = daily_stats.sort_values("date")
         
         # 计算ICIR: ICIR = IC_mean / IC_std
-        # 只有当std > 0时才计算ICIR，否则为NaN（不填充为0，因为0没有意义）
+        # 只有当std > 0时才计算ICIR，否则为None（在JSON中会序列化为null）
         daily_stats["icir"] = daily_stats.apply(
             lambda row: row["mean"] / row["std"] if row["std"] > 0 else None, 
             axis=1
         )
-        # 将None转换为NaN，然后前端会处理NaN显示
-        daily_stats["icir"] = daily_stats["icir"].replace([None], np.nan)
+        # 将NaN转换为None（JSON不支持NaN，None会序列化为null）
+        daily_stats["icir"] = daily_stats["icir"].where(pd.notna(daily_stats["icir"]), None)
+        
+        # 转换为列表，None会保持为None（JSON序列化为null）
+        icir_list = [None if pd.isna(x) else float(x) if x is not None else None for x in daily_stats["icir"]]
         
         return jsonify({
             "error": None,
             "dates": [d.strftime("%Y-%m-%d") for d in daily_stats["date"]],
-            "icir": daily_stats["icir"].tolist()
+            "icir": icir_list
         })
     except Exception as e:
         import traceback
