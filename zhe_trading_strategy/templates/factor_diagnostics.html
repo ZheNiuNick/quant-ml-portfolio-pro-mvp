@@ -843,16 +843,24 @@
             });
             
             // Show risk exposure table
-            let tableHtml = '<table class="table table-striped"><thead><tr><th>Factor</th><th>Exposure</th><th>Risk Contribution</th></tr></thead><tbody>';
+            let tableHtml = '<table class="table table-striped"><thead><tr><th>Style Factor</th><th>Exposure</th><th>Risk Contribution</th></tr></thead><tbody>';
             data.factors.forEach((factor, idx) => {
                 // Risk contribution is already in percentage from backend (0-100), no need to multiply by 100
                 const riskContrib = data.risk_contributions[idx];
                 tableHtml += `<tr>
-                    <td>${factor}</td>
+                    <td><strong>${factor}</strong></td>
                     <td>${data.exposures[idx].toFixed(4)}</td>
                     <td>${typeof riskContrib === 'number' ? riskContrib.toFixed(2) : '0.00'}%</td>
                 </tr>`;
             });
+            // Add specific risk row if available
+            if (data.specific_risk_contribution !== undefined && data.specific_risk_contribution !== null) {
+                tableHtml += `<tr class="table-info">
+                    <td><strong>Specific Risk (Idiosyncratic)</strong></td>
+                    <td>-</td>
+                    <td>${typeof data.specific_risk_contribution === 'number' ? data.specific_risk_contribution.toFixed(2) : '0.00'}%</td>
+                </tr>`;
+            }
             tableHtml += '</tbody></table>';
             document.getElementById('risk-exposure-table').innerHTML = tableHtml;
             
@@ -862,11 +870,20 @@
                     <h6><i class="fas fa-info-circle me-2"></i>Multi-Factor Risk Exposure (Barra-style) Interpretation</h6>
                     <div class="row">
                         <div class="col-md-12">
-                            <h6><i class="fas fa-chart-bar me-2"></i>What is Risk Exposure?</h6>
+                            <h6><i class="fas fa-chart-bar me-2"></i>What is Barra-Style Risk Exposure?</h6>
                             <p class="small mb-3">
-                                Risk exposure measures how sensitive the portfolio is to different risk factors. 
-                                Similar to Barra's risk model, this analysis breaks down portfolio risk into 
-                                contributions from various factors (momentum, quality, volatility, value, size, etc.).
+                                This analysis uses a <strong>Barra-style multi-factor risk model</strong> to decompose portfolio risk. 
+                                Unlike raw factor analysis, this model:
+                            </p>
+                            <ul class="small mb-3">
+                                <li><strong>Groups raw factors</strong> into economically interpretable style buckets (Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom)</li>
+                                <li><strong>Excludes Alpha factors</strong> from risk modeling (Alpha factors contribute to expected returns and specific risk, not systematic risk)</li>
+                                <li><strong>Applies PCA</strong> within each style bucket to extract the dominant factor, reducing multicollinearity</li>
+                                <li><strong>Orthogonalizes style factors</strong> to ensure independent risk sources</li>
+                                <li><strong>Separates systematic risk</strong> (factor risk) from <strong>specific risk</strong> (idiosyncratic risk)</li>
+                            </ul>
+                            <p class="small mb-3">
+                                The displayed factors are <strong>style-level factors</strong>, not individual raw factors, providing a clean and interpretable risk decomposition.
                             </p>
                             
                             <h6><i class="fas fa-arrow-up me-2"></i>Positive Exposure</h6>
@@ -891,6 +908,23 @@
                                 be closely monitored, as they drive most of the portfolio's volatility. A 
                                 well-diversified portfolio typically has risk contributions spread across 
                                 multiple factors rather than concentrated in one or two.
+                            </p>
+                            <h6><i class="fas fa-percentage me-2"></i>Risk Contribution Interpretation</h6>
+                            <p class="small mb-3">
+                                <strong>Risk Contribution (%)</strong> shows what percentage of the portfolio's total risk 
+                                comes from each style factor. The contributions sum to 100% (or close to 100% if specific risk 
+                                is included separately).
+                            </p>
+                            <p class="small mb-3">
+                                <strong>Style Factor Distribution:</strong> In a well-balanced Barra model, risk is typically 
+                                distributed across multiple style factors. The concentration of risk in a few factors (e.g., 
+                                Liquidity, Momentum) indicates the portfolio's sensitivity to those particular risk dimensions.
+                            </p>
+                            <p class="small mb-3">
+                                <strong>Specific Risk:</strong> This represents idiosyncratic (stock-specific) risk that cannot 
+                                be explained by systematic style factors. It captures company-specific events, earnings surprises, 
+                                and other non-systematic risks. A well-diversified portfolio typically has lower specific risk 
+                                contribution.
                             </p>
                             
                             <h6><i class="fas fa-lightbulb me-2"></i>How to Use This Analysis</h6>
