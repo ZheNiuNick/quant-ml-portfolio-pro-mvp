@@ -331,8 +331,9 @@ def generate_risk_exposure():
                     for factor_name in risk_contributions:
                         risk_contributions[factor_name] = risk_contributions[factor_name] / total_risk
                 
-                # 计算平均暴露度（保留正负号，不使用绝对值）
-                avg_exposures = {name: float(exp.mean()) for name, exp in exposures.items()}
+                # 计算暴露度（使用中位数而不是均值，因为标准化后的因子均值为0）
+                # 中位数能更好地反映因子值的分布特征，保留正负号
+                avg_exposures = {name: float(exp.median()) for name, exp in exposures.items()}
                 
                 # 排序（按风险贡献，取前50个以显示更多因子，包括正负暴露）
                 sorted_factors = sorted(risk_contributions.items(), key=lambda x: x[1], reverse=True)[:50]
