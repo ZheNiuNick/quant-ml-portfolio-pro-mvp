@@ -280,39 +280,53 @@ def generate_barra_risk_exposure():
                 if forward_returns is not None and factor_returns is not None and len(factor_returns) > 0:
                     # Estimate specific risk from regression residuals
                     common_tickers = style_factors_ortho.index.intersection(forward_returns.index)
-                    if len(common_tickers) > 0:
+                    if len(common_tickers) > 0 and len(common_tickers) > len(style_factors_ortho.columns):
                         X = style_factors_ortho.loc[common_tickers]
                         y = forward_returns.loc[common_tickers]
-                        predicted = (X * factor_returns).sum(axis=1)
+                        
+                        # Align factor returns with style factor columns
+                        factor_returns_aligned = factor_returns.reindex(X.columns).fillna(0.0)
+                        predicted = (X * factor_returns_aligned).sum(axis=1)
                         residuals = y - predicted
-                        specific_risk = float(residuals.std())
+                        specific_risk_val = residuals.std()
+                        if not (pd.isna(specific_risk_val) or np.isnan(specific_risk_val)):
+                            specific_risk = float(specific_risk_val)
                 
                 # Step 9: Compute risk contributions
-                # Risk contribution = factor variance / (factor variance + specific variance)
-                # For now, use factor variance proportion
+                # For Barra model, we use factor covariance matrix for proper risk decomposition
+                # For now, we use factor variance as approximation
                 risk_contributions = {}
                 specific_risk_contribution = 0.0
                 
                 if total_variance > 0:
-                    # Factor risk contributions
+                    # Factor risk contributions (based on variance)
                     for style_name, variance in style_variances.items():
                         risk_contributions[style_name] = float((variance / total_variance) * 100)
                     
-                    # If we have specific risk, adjust contributions
-                    if specific_risk is not None and specific_risk > 0:
-                        # Assume equal weight portfolio for specific risk calculation
-                        n_stocks = len(style_factors_ortho.index)
-                        if n_stocks > 0:
-                            specific_variance = (specific_risk ** 2) / n_stocks  # Diversification effect
-                            total_variance_with_specific = total_variance + specific_variance
+                    # If we have specific risk and portfolio weights, compute specific risk contribution
+                    if specific_risk is not None and specific_risk > 0 and portfolio_weights is not None:
+                        # Portfolio-specific risk variance
+                        # For equal-weighted portfolio with n stocks: specific_var = avg_specific_var / n
+                        # This accounts for diversification
+                        n_positions = len(portfolio_weights)
+                        if n_positions > 0:
+                            # Average specific variance per stock (assume same for all stocks)
+                            avg_specific_var = specific_risk ** 2
+                            # Diversified portfolio specific variance
+                            portfolio_specific_var = avg_specific_var / n_positions
                             
-                            # Adjust contributions
-                            factor_risk_pct = (total_variance / total_variance_with_specific) * 100
-                            specific_risk_contribution = (specific_variance / total_variance_with_specific) * 100
+                            # Total portfolio variance = factor variance + specific variance
+                            total_variance_with_specific = total_variance + portfolio_specific_var
                             
-                            # Scale factor contributions
-                            for style_name in risk_contributions:
-                                risk_contributions[style_name] = risk_contributions[style_name] * (factor_risk_pct / 100)
+                            # Compute contributions
+                            if total_variance_with_specific > 0:
+                                factor_risk_pct = (total_variance / total_variance_with_specific) * 100
+                                specific_risk_contribution = (portfolio_specific_var / total_variance_with_specific) * 100
+                                
+                                # Scale factor contributions to account for specific risk
+                                scale_factor = factor_risk_pct / 100.0
+                                for style_name in risk_contributions:
+                                    risk_contributions[style_name] = risk_contributions[style_name] * scale_factor
                 else:
                     for style_name in style_factors_ortho.columns:
                         risk_contributions[style_name] = 0.0
