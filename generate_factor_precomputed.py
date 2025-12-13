@@ -265,15 +265,15 @@ def generate_correlation_matrix():
 
 
 def generate_risk_exposure():
-    """生成风险暴露数据（按日期）"""
+    """生成风险暴露数据（按日期）- 基于实际投资组合权重"""
     print("\n" + "=" * 60)
     print("生成风险暴露数据...")
     print("=" * 60)
     
     try:
+        # 1. 读取因子数据
         factor_cfg = load_factor_settings(str(SETTINGS))
         factor_store_rel_path = factor_cfg["paths"].get("factors_store", "data/factors/factor_store.parquet")
-        # 如果已经是绝对路径，直接使用；否则基于项目根目录解析
         if Path(factor_store_rel_path).is_absolute():
             factor_store_path = Path(factor_store_rel_path)
         else:
@@ -291,6 +291,23 @@ def generate_risk_exposure():
                 factor_store["date"] = pd.to_datetime(factor_store["date"])
                 factor_store = factor_store.set_index(["date", "ticker"]).sort_index()
         
+        # 2. 读取投资组合权重
+        portfolio_path_rel = factor_cfg["paths"].get("portfolio_path", "outputs/portfolios/weights.parquet")
+        if Path(portfolio_path_rel).is_absolute():
+            portfolio_path = Path(portfolio_path_rel)
+        else:
+            portfolio_path = (ROOT_DIR / portfolio_path_rel).resolve()
+        
+        if not portfolio_path.exists():
+            print(f"⚠️  权重文件不存在: {portfolio_path}")
+            print("   将使用所有股票的平均因子值（不推荐）")
+            weights_df = None
+        else:
+            print(f"📖 读取投资组合权重: {portfolio_path}")
+            weights_df = pd.read_parquet(portfolio_path)
+            weights_df.index = pd.to_datetime(weights_df.index)
+            print(f"   权重日期范围: {weights_df.index.min()} 到 {weights_df.index.max()}")
+        
         # 获取所有可用日期（最近30个交易日）
         available_dates = pd.to_datetime(factor_store.index.get_level_values(0).unique()).sort_values()
         dates_to_process = available_dates[-30:]  # 只处理最近30个交易日
@@ -305,53 +322,94 @@ def generate_risk_exposure():
             
             try:
                 date_factors = factor_store.loc[factor_store.index.get_level_values(0) == date_obj]
+                # 重置索引，只保留 ticker 级别
+                if isinstance(date_factors.index, pd.MultiIndex):
+                    date_factors = date_factors.reset_index(level='date', drop=True)
                 
-                # 计算因子暴露度（标准化后的因子值，用于显示）
-                exposures = {}
-                # 保存原始因子值用于计算风险贡献
-                raw_factors = {}
+                # 3. 获取当日投资组合权重
+                portfolio_weights = None
+                portfolio_tickers = None
+                if weights_df is not None:
+                    # 查找最接近的日期权重
+                    if date_obj in weights_df.index:
+                        portfolio_weights_series = weights_df.loc[date_obj].fillna(0.0)
+                        portfolio_weights_series = portfolio_weights_series[portfolio_weights_series > 0]
+                        if len(portfolio_weights_series) > 0:
+                            portfolio_weights = portfolio_weights_series
+                            portfolio_tickers = portfolio_weights.index.tolist()
+                            # 归一化权重（确保和为1）
+                            portfolio_weights = portfolio_weights / portfolio_weights.sum()
+                
+                # 4. 计算因子暴露度和风险贡献
+                portfolio_exposures = {}
+                portfolio_risk_contributions = {}
+                
                 for factor_name in date_factors.columns:
+                    # date_factors 已经是该日期的数据，factor_series 是 Series(ticker -> value)
                     factor_series = date_factors[factor_name].dropna()
-                    if len(factor_series) > 0:
-                        # 保存原始因子值
-                        raw_factors[factor_name] = factor_series
-                        # 标准化用于暴露度显示
+                    
+                    if portfolio_weights is not None and portfolio_tickers:
+                        # 方法1: 使用投资组合权重计算因子暴露度（Barra-style）
+                        # 只考虑投资组合中的股票
+                        portfolio_factor_values = factor_series.reindex(portfolio_tickers).dropna()
+                        portfolio_weights_aligned = portfolio_weights.reindex(portfolio_factor_values.index).fillna(0.0)
+                        
+                        if len(portfolio_factor_values) > 0 and portfolio_weights_aligned.sum() > 0:
+                            # 归一化对齐的权重
+                            portfolio_weights_aligned = portfolio_weights_aligned / portfolio_weights_aligned.sum()
+                            
+                            # 计算基准（所有股票的平均值和标准差）
+                            benchmark_mean = factor_series.mean()
+                            benchmark_std = factor_series.std()
+                            
+                            # 计算投资组合的因子暴露度（加权平均）
+                            portfolio_factor_mean = (portfolio_weights_aligned * portfolio_factor_values).sum()
+                            
+                            # Barra-style 暴露度：相对于基准的标准化暴露度
+                            # 暴露度 = (投资组合因子值 - 基准因子值) / 基准因子标准差
+                            if benchmark_std > 0:
+                                portfolio_exposure = (portfolio_factor_mean - benchmark_mean) / benchmark_std
+                            else:
+                                portfolio_exposure = 0.0
+                            
+                            portfolio_exposures[factor_name] = float(portfolio_exposure)
+                            
+                            # 计算风险贡献：使用投资组合中股票因子值的加权方差
+                            weighted_mean = (portfolio_weights_aligned * portfolio_factor_values).sum()
+                            weighted_variance = ((portfolio_weights_aligned * (portfolio_factor_values - weighted_mean) ** 2).sum())
+                            portfolio_risk_contributions[factor_name] = weighted_variance
+                        else:
+                            portfolio_exposures[factor_name] = 0.0
+                            portfolio_risk_contributions[factor_name] = 0.0
+                    else:
+                        # 方法2: 如果没有权重文件，使用所有股票的平均（旧方法）
                         mean_val = factor_series.mean()
                         std_val = factor_series.std()
                         if std_val > 0:
-                            exposures[factor_name] = (factor_series - mean_val) / std_val
+                            normalized = (factor_series - mean_val) / std_val
+                            portfolio_exposures[factor_name] = float(normalized.median())
                         else:
-                            exposures[factor_name] = pd.Series([0.0] * len(factor_series), index=factor_series.index)
+                            portfolio_exposures[factor_name] = 0.0
+                        portfolio_risk_contributions[factor_name] = float(factor_series.var())
                 
-                # 计算风险贡献（使用原始因子值的方差，而不是标准化后的）
-                # 标准化后的因子方差都相同，无法区分风险贡献
-                risk_contributions = {}
-                total_risk = 0
-                for factor_name, raw_series in raw_factors.items():
-                    # 使用原始因子值的方差作为风险度量
-                    risk = raw_series.var()
-                    risk_contributions[factor_name] = risk
-                    total_risk += risk
-                
-                # 归一化风险贡献
+                # 5. 归一化风险贡献
+                total_risk = sum(portfolio_risk_contributions.values())
                 if total_risk > 0:
-                    for factor_name in risk_contributions:
-                        risk_contributions[factor_name] = risk_contributions[factor_name] / total_risk
+                    for factor_name in portfolio_risk_contributions:
+                        portfolio_risk_contributions[factor_name] = portfolio_risk_contributions[factor_name] / total_risk
                 
-                # 计算暴露度（使用中位数而不是均值，因为标准化后的因子均值为0）
-                # 中位数能更好地反映因子值的分布特征，保留正负号
-                avg_exposures = {name: float(exp.median()) for name, exp in exposures.items()}
-                
-                # 排序（按风险贡献，取前50个以显示更多因子，包括正负暴露）
-                sorted_factors = sorted(risk_contributions.items(), key=lambda x: x[1], reverse=True)[:50]
+                # 6. 排序（按风险贡献，取前50个）
+                sorted_factors = sorted(portfolio_risk_contributions.items(), key=lambda x: x[1], reverse=True)[:50]
                 
                 results[date_obj.strftime("%Y-%m-%d")] = {
                     "factors": [f[0] for f in sorted_factors],
-                    "exposures": [round(avg_exposures.get(f[0], 0.0), 4) for f in sorted_factors],
+                    "exposures": [round(portfolio_exposures.get(f[0], 0.0), 4) for f in sorted_factors],
                     "risk_contributions": [round(f[1] * 100, 2) for f in sorted_factors]
                 }
             except Exception as e:
                 print(f"  ⚠️  日期 {date_obj} 处理失败: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
         
         # 保存结果
