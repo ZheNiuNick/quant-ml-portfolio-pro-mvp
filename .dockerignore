@@ -1,0 +1,78 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Documentation
+*.md
+!README.md
+
+# Data files (not needed in Docker, will be downloaded separately if needed)
+data/factors/*.parquet
+data/processed/*.parquet
+duckdb/*.duckdb
+*.parquet
+*.duckdb
+*.pkl
+*.cbm
+*.model
+*.h5
+
+# Keep small output files that are needed
+!outputs/ibkr_data/*.json
+!outputs/portfolios/*.parquet
+!outputs/reports/*.json
+!outputs/backtests/*.json
+!outputs/factor_*.json
+!data/factors/factor_ic_ir.parquet
+
+# Quarto build output
+zhe_trading_strategy/_site/
+zhe_trading_strategy/site_libs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Railway/Nixpacks
+.nixpacks/
+railway.json
+nixpacks.toml
+
+# Tests
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
