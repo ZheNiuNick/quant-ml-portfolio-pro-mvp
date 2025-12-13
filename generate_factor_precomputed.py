@@ -306,11 +306,16 @@ def generate_risk_exposure():
             try:
                 date_factors = factor_store.loc[factor_store.index.get_level_values(0) == date_obj]
                 
-                # 计算因子暴露度（标准化后的因子值）
+                # 计算因子暴露度（标准化后的因子值，用于显示）
                 exposures = {}
+                # 保存原始因子值用于计算风险贡献
+                raw_factors = {}
                 for factor_name in date_factors.columns:
                     factor_series = date_factors[factor_name].dropna()
                     if len(factor_series) > 0:
+                        # 保存原始因子值
+                        raw_factors[factor_name] = factor_series
+                        # 标准化用于暴露度显示
                         mean_val = factor_series.mean()
                         std_val = factor_series.std()
                         if std_val > 0:
@@ -318,11 +323,13 @@ def generate_risk_exposure():
                         else:
                             exposures[factor_name] = pd.Series([0.0] * len(factor_series), index=factor_series.index)
                 
-                # 计算风险贡献
+                # 计算风险贡献（使用原始因子值的方差，而不是标准化后的）
+                # 标准化后的因子方差都相同，无法区分风险贡献
                 risk_contributions = {}
                 total_risk = 0
-                for factor_name, exp_series in exposures.items():
-                    risk = exp_series.var()
+                for factor_name, raw_series in raw_factors.items():
+                    # 使用原始因子值的方差作为风险度量
+                    risk = raw_series.var()
                     risk_contributions[factor_name] = risk
                     total_risk += risk
                 
