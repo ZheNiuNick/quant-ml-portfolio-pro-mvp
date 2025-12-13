@@ -1126,7 +1126,9 @@ def risk_exposure():
             "date": selected_date,
             "factors": result["factors"],
             "exposures": result["exposures"],
-            "risk_contributions": result["risk_contributions"]
+            "risk_contributions": result["risk_contributions"],
+            "specific_risk_contribution": result.get("specific_risk_contribution", 0),
+            "specific_risk": result.get("specific_risk", None)
         })
     except Exception as e:
         import traceback
