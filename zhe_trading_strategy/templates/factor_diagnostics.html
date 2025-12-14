@@ -827,11 +827,25 @@
                     ? factor.icir.toFixed(4) 
                     : 'N/A';
                 
-                // Get top style exposure for display
+                // Get top style exposure for display (MUST be numeric, never N/A)
                 let topExposureDisplay = 'N/A';
-                if (factor.top_exposures && Object.keys(factor.top_exposures).length > 0) {
-                    const topEntry = Object.entries(factor.top_exposures)[0];
-                    topExposureDisplay = `${topEntry[0]}: ${parseFloat(topEntry[1]).toFixed(3)}`;
+                if (factor.top_style_exposure !== undefined && factor.top_style_exposure !== null) {
+                    // Use top_style_exposure field (numeric)
+                    const topExposureValue = parseFloat(factor.top_style_exposure);
+                    if (!isNaN(topExposureValue)) {
+                        // Find the style name from top_exposures dict
+                        if (factor.top_exposures && Object.keys(factor.top_exposures).length > 0) {
+                            const topEntry = Object.entries(factor.top_exposures)[0];
+                            topExposureDisplay = `${topEntry[0]}: ${topExposureValue.toFixed(3)}`;
+                        } else {
+                            topExposureDisplay = `${factor.dominant_style}: ${topExposureValue.toFixed(3)}`;
+                        }
+                    }
+                }
+                
+                // Fail if top_style_exposure is missing (should never happen with canonical matrix)
+                if (topExposureDisplay === 'N/A' && factor.dominant_style !== 'Custom') {
+                    console.error(`Missing top_style_exposure for factor ${factor.name} with dominant_style ${factor.dominant_style}`);
                 }
                 
                 tableHtml += `<tr>

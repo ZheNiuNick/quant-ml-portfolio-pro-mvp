@@ -1082,66 +1082,67 @@ def factor_clusters():
         factor_stats["tstat"] = factor_stats["ic_mean"] / (factor_stats["ic_std"] / np.sqrt(factor_stats["ic_count"]))
         factor_stats["tstat"] = factor_stats["tstat"].fillna(0)
         
-        # Load canonical matrix (SINGLE SOURCE OF TRUTH)
+        # Load canonical matrix (SINGLE SOURCE OF TRUTH - NO FALLBACK)
         canonical_matrix_path = DATA_FACTORS_DIR / "factor_style_exposure.parquet"
-        attribution_path = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
         
-        # Initialize variables (must be in outer scope for use in loop below)
-        exposure_matrix_df = None
-        attribution_df = None
+        if not canonical_matrix_path.exists():
+            return jsonify({
+                "error": f"Canonical matrix not found: {canonical_matrix_path}. Please run scripts/compute_raw_factor_style_exposure.py first.",
+                "clusters": {}
+            }), 200
         
-        # Load canonical matrix
-        if canonical_matrix_path.exists():
-            exposure_matrix_df = pd.read_parquet(canonical_matrix_path)
-            print(f"[INFO] Loaded canonical matrix: {len(exposure_matrix_df)} exposure records")
+        # Load canonical matrix (MANDATORY - no fallback)
+        exposure_matrix_df = pd.read_parquet(canonical_matrix_path)
+        print(f"[INFO] Loaded canonical matrix (SINGLE SOURCE OF TRUTH): {len(exposure_matrix_df)} exposure records")
         
-        # Load attribution file
-        if attribution_path.exists():
-            attribution_df = pd.read_parquet(attribution_path)
-            print(f"[INFO] Loaded attribution file: {len(attribution_df)} factors")
+        # Compute dominant_style and top_exposure for each factor from canonical matrix
+        from src.barra_style_mapper import BarraStyleMapper
+        mapper = BarraStyleMapper()
+        CUSTOM_THRESHOLD = mapper.CUSTOM_THRESHOLD
         
-        if attribution_df is not None:
-            # Merge dominant_style and top_style_exposure from attribution file
-            merge_cols = ["factor", "dominant_style"]
-            if "top_style_exposure" in attribution_df.columns:
-                merge_cols.append("top_style_exposure")
+        dominant_styles = []
+        top_exposures_list = []
+        top_exposures_dict_list = []  # For tooltip display
+        
+        for _, factor_row in factor_stats.iterrows():
+            factor_name = factor_row["factor"]
+            factor_exposures = exposure_matrix_df[exposure_matrix_df["factor"] == factor_name]
             
-            factor_stats = factor_stats.merge(
-                attribution_df[merge_cols],
-                on="factor",
-                how="left"
-            )
-            
-            factor_stats["dominant_style"] = factor_stats["dominant_style"].fillna("Custom")
-            if "top_style_exposure" in factor_stats.columns:
-                factor_stats["top_style_exposure"] = factor_stats["top_style_exposure"].fillna(0.0)
+            if factor_exposures.empty:
+                # Factor not in matrix, assign Custom
+                dominant_styles.append("Custom")
+                top_exposures_list.append(0.0)
+                top_exposures_dict_list.append({})
             else:
-                factor_stats["top_style_exposure"] = 0.0
-        elif exposure_matrix_df is not None:
-            # Compute dominant_style from canonical matrix if attribution file missing
-            print("[WARN] Attribution file not found, computing dominant_style from canonical matrix")
-            from src.barra_style_mapper import BarraStyleMapper
-            mapper = BarraStyleMapper()
-            
-            dominant_styles = []
-            top_exposures_list = []
-            for factor in factor_stats["factor"]:
-                factor_exposures = exposure_matrix_df[exposure_matrix_df["factor"] == factor]
-                if not factor_exposures.empty:
-                    exposures_dict = {row["style"]: row["exposure"] for _, row in factor_exposures.iterrows()}
-                    dominant_style = mapper.assign_dominant_style(exposures_dict, min_abs_exposure=mapper.CUSTOM_THRESHOLD)
-                    top_exposure = max(abs(v) for v in exposures_dict.values()) if exposures_dict else 0.0
+                # Pivot exposures into dictionary: {style: exposure}
+                exposures_dict = {row["style"]: float(row["exposure"]) for _, row in factor_exposures.iterrows()}
+                
+                # Compute dominant_style = argmax(abs(exposure))
+                if exposures_dict:
+                    max_abs_exposure = max(abs(v) for v in exposures_dict.values())
+                    dominant_style = max(exposures_dict.items(), key=lambda x: abs(x[1]))[0]
+                    
+                    # Assign Custom ONLY IF max_abs_exposure < threshold
+                    if max_abs_exposure < CUSTOM_THRESHOLD:
+                        dominant_style = "Custom"
+                    
+                    # Get top 2 exposures for tooltip (sorted by absolute value)
+                    sorted_exposures = sorted(exposures_dict.items(), key=lambda x: abs(x[1]), reverse=True)
+                    top_2_exposures = dict(sorted_exposures[:2])
+                    
+                    dominant_styles.append(dominant_style)
+                    top_exposures_list.append(float(max_abs_exposure))
+                    top_exposures_dict_list.append(top_2_exposures)
                 else:
-                    dominant_style = "Custom"
-                    top_exposure = 0.0
-                dominant_styles.append(dominant_style)
-                top_exposures_list.append(top_exposure)
-            factor_stats["dominant_style"] = dominant_styles
-            factor_stats["top_style_exposure"] = top_exposures_list
-        else:
-            print("[WARN] No style exposure data found, assigning all to Custom")
-            factor_stats["dominant_style"] = "Custom"
-            factor_stats["top_style_exposure"] = 0.0
+                    dominant_styles.append("Custom")
+                    top_exposures_list.append(0.0)
+                    top_exposures_dict_list.append({})
+        
+        # Add computed columns to factor_stats
+        factor_stats = factor_stats.copy()
+        factor_stats["dominant_style"] = dominant_styles
+        factor_stats["top_style_exposure"] = top_exposures_list
+        factor_stats["top_exposures_dict"] = top_exposures_dict_list  # For API response
         
         # Initialize clusters with canonical Barra-style categories (SINGLE SOURCE OF TRUTH)
         from src.barra_style_mapper import BarraStyleMapper
@@ -1163,34 +1164,28 @@ def factor_clusters():
             else:
                 icir_value = float(icir_value)
             
-            # Get top 2 style exposures from canonical matrix (SINGLE SOURCE OF TRUTH)
-            top_exposures = {}
-            if exposure_matrix_df is not None:
-                factor_exposures = exposure_matrix_df[exposure_matrix_df["factor"] == row["factor"]]
-                if not factor_exposures.empty:
-                    exposures_dict = {row_style["style"]: row_style["exposure"] for _, row_style in factor_exposures.iterrows()}
-                    # Sort by absolute value and take top 2
-                    sorted_exposures = sorted(exposures_dict.items(), key=lambda x: abs(x[1]), reverse=True)
-                    top_exposures = dict(sorted_exposures[:2])
-            elif 'attribution_df' in locals() and attribution_df is not None:
-                # Fallback to attribution file (wide format)
-                factor_attr = attribution_df[attribution_df["factor"] == row["factor"]]
-                if not factor_attr.empty:
-                    exposure_cols = [col for col in attribution_df.columns if col.startswith("style_exposure_")]
-                    exposures = {}
-                    for col in exposure_cols:
-                        style_name = col.replace("style_exposure_", "")
-                        exposures[style_name] = float(factor_attr[col].iloc[0]) if not pd.isna(factor_attr[col].iloc[0]) else 0.0
-                    sorted_exposures = sorted(exposures.items(), key=lambda x: abs(x[1]), reverse=True)
-                    top_exposures = dict(sorted_exposures[:2])
+            # Get top exposures from precomputed dict (from canonical matrix)
+            top_exposures = row.get("top_exposures_dict", {})
+            
+            # Ensure top_exposures is a dict (never N/A)
+            if not isinstance(top_exposures, dict):
+                top_exposures = {}
+            
+            # Validate top_style_exposure is numeric
+            top_style_exposure_value = row.get("top_style_exposure", 0.0)
+            if pd.isna(top_style_exposure_value):
+                top_style_exposure_value = 0.0
+            else:
+                top_style_exposure_value = float(top_style_exposure_value)
             
             clusters[dominant_style].append({
                 "name": row["factor"],
                 "ic_mean": float(row["ic_mean"]) if not pd.isna(row["ic_mean"]) else 0.0,
-                "icir": icir_value,  # 可能是 None（NaN）
+                "icir": icir_value,  # May be None (NaN)
                 "tstat": float(row["tstat"]) if not pd.isna(row["tstat"]) else 0.0,
                 "dominant_style": dominant_style,
-                "top_exposures": top_exposures  # For hover tooltip
+                "top_style_exposure": top_style_exposure_value,  # Numeric, never N/A
+                "top_exposures": top_exposures  # Dict with top 2 exposures for tooltip
             })
         
         # Remove empty clusters
