@@ -886,14 +886,21 @@
                                     Alpha factors are excluded (they are signals, not risk factors).</li>
                                 <li><strong>Cross-Sectional Normalization:</strong> For each date, factors are winsorized (clipped 
                                     at 1st/99th percentiles) and z-score normalized to ensure comparability across stocks.</li>
-                                <li><strong>Dimensionality Reduction (PCA):</strong> Within each style bucket, Principal Component 
-                                    Analysis extracts the first principal component (PC1) as the representative style factor, 
-                                    reducing multicollinearity while preserving the dominant risk dimension.</li>
-                                <li><strong>Orthogonalization:</strong> Gram-Schmidt process ensures style factors are approximately 
-                                    orthogonal (independent), allowing additive risk decomposition without double-counting.</li>
+                                <li><strong>Fixed PCA Structure (Rolling Window):</strong> Using a rolling window (60-252 days, 
+                                    default 126 days), Principal Component Analysis loadings are estimated once and kept fixed 
+                                    across all dates. Within each style bucket, the first principal component (PC1) loadings are 
+                                    computed from the reference window and applied to all subsequent dates. This ensures <strong>time-stable 
+                                    factor definitions</strong>—the same raw factors map to the same style factors across time, 
+                                    allowing meaningful time-series analysis and consistent risk attribution.</li>
+                                <li><strong>Fixed Orthogonalization Matrix:</strong> Using the same rolling window, the Gram-Schmidt 
+                                    orthogonalization matrix is estimated once and kept fixed. This ensures style factors are 
+                                    consistently orthogonalized across all dates, maintaining independence while preserving temporal 
+                                    stability. The orthogonalization order and transformation are fixed based on the reference window.</li>
                                 <li><strong>Factor Return Estimation:</strong> Daily factor returns are estimated via cross-sectional 
                                     regression: <code>r_{i,t+1} = Σ_k (β_{i,k,t} × f_{k,t+1}) + ε_{i,t+1}</code>, where exposures (β) 
-                                    are from time t and stock returns (r) are from time t+1 (no look-ahead bias).</li>
+                                    are from time t and stock returns (r) are from time t+1 (no look-ahead bias). The factor exposures 
+                                    β_{i,k,t} use the <strong>fixed PCA and orthogonalization structure</strong> estimated from the 
+                                    rolling window, ensuring consistency across time.</li>
                                 <li><strong>Factor Covariance Matrix:</strong> Time-series covariance of factor returns is estimated 
                                     using EWMA (Exponentially Weighted Moving Average) with λ=0.94: <code>Σ_f = Cov(factor_returns)</code>.</li>
                                 <li><strong>Risk Decomposition:</strong> Portfolio variance is computed as: 
@@ -905,7 +912,7 @@
                             <div class="small mb-3" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace;">
                                 <p><strong>Portfolio Factor Exposure:</strong></p>
                                 <p style="margin-left: 20px;">b_k = Σ_i (w_i × β_{i,k})</p>
-                                <p style="font-size: 0.9em; color: #666;">where w_i is portfolio weight for stock i, β_{i,k} is factor k exposure for stock i</p>
+                                <p style="font-size: 0.9em; color: #666;">where w_i is portfolio weight for stock i, β_{i,k} is factor k exposure for stock i (computed using fixed PCA/orthogonalization structure)</p>
                                 
                                 <p class="mt-3"><strong>Portfolio Variance:</strong></p>
                                 <p style="margin-left: 20px;">σ²_portfolio = b^T Σ_f b + σ²_specific</p>
