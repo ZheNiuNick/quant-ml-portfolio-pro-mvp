@@ -135,11 +135,13 @@ def generate_barra_risk_exposure():
             normalized_bucket_factors_ref = {}
             fixed_pca_feature_names = {}  # Store feature names for each bucket's PCA model
             
-            for bucket_name, factor_patterns in model.factor_taxonomy.items():
-                bucket_factor_names = []
-                for pattern in factor_patterns:
-                    # Include ALL factors matching pattern (Alpha factors are raw factors too)
-                    bucket_factor_names.extend([f for f in reference_factors.columns if pattern in f])
+            # Use classified factors (includes Unclassified → Custom mapping)
+            for bucket_name in classified.keys():
+                if bucket_name == 'Unclassified':
+                    continue  # Already mapped to Custom
+                
+                # Use the actual classified factor names
+                bucket_factor_names = [f for f in classified[bucket_name] if f in reference_factors.columns]
                 
                 if len(bucket_factor_names) == 0:
                     continue
