@@ -53,6 +53,7 @@ duckdb/*.duckdb
 !outputs/backtests/*.json
 !outputs/factor_*.json
 !data/factors/factor_ic_ir.parquet
+!data/factors/factor_style_exposure.parquet
 
 # Quarto build output
 zhe_trading_strategy/_site/
