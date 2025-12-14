@@ -68,6 +68,10 @@
                 <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Rolling IC (60D)</h5>
             </div>
             <div class="card-body">
+                <p class="text-muted small mb-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Rolling statistics begin once 60 trading days of data are available.
+                </p>
                 <div id="rolling-ic-chart" class="chart-container"></div>
             </div>
         </div>
@@ -80,6 +84,10 @@
                         <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Rolling ICIR (60D)</h5>
                     </div>
                     <div class="card-body">
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            ICIR = mean(IC_60d) / std(IC_60d)
+                        </p>
                         <div id="rolling-icir-chart" class="chart-container"></div>
                     </div>
                 </div>
@@ -90,6 +98,10 @@
                         <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Rolling t-stat (60D)</h5>
                     </div>
                     <div class="card-body">
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            t-stat = mean(IC_60d) / std(IC_60d) × √N
+                        </p>
                         <div id="rolling-tstat-chart" class="chart-container"></div>
                     </div>
                 </div>
