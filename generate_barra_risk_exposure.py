@@ -105,7 +105,7 @@ def generate_barra_risk_exposure():
         print(f"\n📅 处理 {len(dates_to_process)} 个日期...")
         
         results = {}
-        factor_returns_history = []  # For covariance estimation
+        factor_returns_history = []  # List to store factor returns DataFrames for covariance estimation
         
         for i, date_obj in enumerate(dates_to_process, 1):
             if i % 10 == 0:
@@ -245,40 +245,44 @@ def generate_barra_risk_exposure():
                             forward_returns = (next_prices['Adj Close'] / current_prices['Adj Close'] - 1.0)
                             forward_returns = forward_returns.dropna()
                 
-                # Step 6: Estimate factor returns using cross-sectional regression
+                # Step 6: Build factor covariance matrix from HISTORICAL factor returns (before estimating current)
+                # 
+                # CRITICAL: Risk must be driven by factor return covariance, NOT by cross-sectional factor variance
+                # 
+                # Why factor return covariance?
+                # 1. Risk measures uncertainty in future returns, not cross-sectional dispersion of factor values
+                # 2. Cross-sectional variance of factor values does not capture how factor returns co-vary over time
+                # 3. Two factors can have high cross-sectional variance but low return covariance (low risk)
+                # 4. Barra models use: portfolio_variance = b^T Σ_f b where Σ_f = Cov(factor_returns over time)
+                # 
+                # Formula: Σ_f = Cov(factor_returns) where factor returns are estimated via cross-sectional regression
+                # IMPORTANT: Use only factor returns from PREVIOUS dates (no look-ahead bias)
+                factor_covariance = None
+                if len(factor_returns_history) >= 2:
+                    # Combine all historical factor returns (from previous dates only)
+                    factor_returns_df_all = pd.concat(factor_returns_history, axis=0)
+                    # Estimate covariance matrix using EWMA (exponentially weighted moving average)
+                    factor_covariance = model.estimate_factor_covariance(factor_returns_df_all, method='ewma', lambda_param=0.94)
+                
+                # Step 7: Estimate factor returns using cross-sectional regression
+                # Factor returns are estimated using forward returns: r_{i,t+1} = Σ_k (β_{i,k,t} × f_{k,t+1}) + ε_{i,t+1}
+                # Note: Factor exposures (β) are from time t, stock returns (r) are from time t+1 (no look-ahead bias)
                 factor_returns = None
                 if forward_returns is not None and len(forward_returns) > 0:
                     factor_returns = model.estimate_factor_returns(style_factors_ortho, forward_returns)
+                    
+                    # Store factor returns for NEXT date's covariance estimation (not used for current date)
+                    if factor_returns is not None and len(factor_returns) > 0:
+                        factor_returns_df = pd.DataFrame([factor_returns], index=[date_obj])
+                        factor_returns_history.append(factor_returns_df)
                 
-                # Step 7: Compute risk contribution
-                # Use factor covariance if we have factor returns history, otherwise use variance
-                style_variances = {}
-                total_variance = 0.0
-                for style_name in style_factors_ortho.columns:
-                    style_values = style_factors_ortho[style_name]
-                    if portfolio_weights is not None:
-                        # Portfolio-weighted variance
-                        common_tickers = portfolio_weights.index.intersection(style_values.index)
-                        if len(common_tickers) > 0:
-                            weights_aligned = portfolio_weights.loc[common_tickers] / portfolio_weights.loc[common_tickers].sum()
-                            style_aligned = style_values.loc[common_tickers]
-                            weighted_mean = (weights_aligned * style_aligned).sum()
-                            variance = ((weights_aligned * (style_aligned - weighted_mean) ** 2).sum())
-                            style_variances[style_name] = float(variance)
-                            total_variance += variance
-                    else:
-                        # Simple variance
-                        variance_val = style_values.var()
-                        if isinstance(variance_val, pd.Series):
-                            variance_val = variance_val.iloc[0] if len(variance_val) > 0 else 0.0
-                        variance = float(variance_val) if not (pd.isna(variance_val) or np.isnan(variance_val)) else 0.0
-                        style_variances[style_name] = variance
-                        total_variance += variance
-                
-                # Step 8: Estimate specific risk (idiosyncratic risk)
-                specific_risk = None
+                # Step 8: Estimate specific risk (idiosyncratic risk) from regression residuals
+                # Specific risk = Var(ε) where ε = r - Σ(β × factor_returns) from regression
+                # For portfolio: σ²_specific = Σ_i (w_i² × σ²_i)
+                specific_risk_per_stock = None
+                specific_risk_series = None
                 if forward_returns is not None and factor_returns is not None and len(factor_returns) > 0:
-                    # Estimate specific risk from regression residuals
+                    # Estimate specific risk using regression residuals
                     common_tickers = style_factors_ortho.index.intersection(forward_returns.index)
                     if len(common_tickers) > 0 and len(common_tickers) > len(style_factors_ortho.columns):
                         X = style_factors_ortho.loc[common_tickers]
@@ -288,58 +292,104 @@ def generate_barra_risk_exposure():
                         factor_returns_aligned = factor_returns.reindex(X.columns).fillna(0.0)
                         predicted = (X * factor_returns_aligned).sum(axis=1)
                         residuals = y - predicted
-                        specific_risk_val = residuals.std()
-                        if not (pd.isna(specific_risk_val) or np.isnan(specific_risk_val)):
-                            specific_risk = float(specific_risk_val)
+                        
+                        # Store residuals as Series for per-stock specific risk
+                        specific_risk_series = residuals
+                        
+                        # Average specific risk (standard deviation of residuals across all stocks)
+                        # This is a cross-sectional measure for this date
+                        specific_risk_per_stock = residuals.std()
                 
-                # Step 9: Compute risk contributions
-                # For Barra model, we use factor covariance matrix for proper risk decomposition
-                # For now, we use factor variance as approximation
+                # Step 9: Compute portfolio risk decomposition using correct Barra formula
+                # Portfolio variance = b^T Σ_f b + σ²_specific
+                # Risk contribution of factor k: RC_k = b_k × (Σ_f b)_k
+                # where b = portfolio factor exposures, Σ_f = factor covariance matrix
                 risk_contributions = {}
                 specific_risk_contribution = 0.0
+                total_portfolio_variance = 0.0
                 
-                if total_variance > 0:
-                    # Factor risk contributions (based on variance)
-                    for style_name, variance in style_variances.items():
-                        risk_contributions[style_name] = float((variance / total_variance) * 100)
+                if portfolio_exposures and factor_covariance is not None and len(factor_covariance) > 0:
+                    # Convert portfolio exposures to vector b (aligned with factor covariance)
+                    style_names = list(portfolio_exposures.keys())
                     
-                    # If we have specific risk and portfolio weights, compute specific risk contribution
-                    if specific_risk is not None and specific_risk > 0 and portfolio_weights is not None:
-                        # Portfolio-specific risk variance
-                        # For equal-weighted portfolio with n stocks: specific_var = avg_specific_var / n
-                        # This accounts for diversification
-                        n_positions = len(portfolio_weights)
-                        if n_positions > 0:
-                            # Average specific variance per stock (assume same for all stocks)
-                            avg_specific_var = specific_risk ** 2
-                            # Diversified portfolio specific variance
-                            portfolio_specific_var = avg_specific_var / n_positions
+                    # Ensure factor covariance columns/index match style names
+                    common_factors = [f for f in style_names if f in factor_covariance.index and f in factor_covariance.columns]
+                    if len(common_factors) > 0:
+                        # Extract sub-matrix for common factors
+                        factor_cov_subset = factor_covariance.loc[common_factors, common_factors]
+                        portfolio_exposure_vector = np.array([portfolio_exposures[f] for f in common_factors])
+                        
+                        # Compute portfolio variance: b^T Σ_f b
+                        factor_variance = portfolio_exposure_vector @ factor_cov_subset.values @ portfolio_exposure_vector
+                        
+                        # Compute specific risk variance: σ²_specific = Σ_i (w_i² × σ²_i)
+                        # For portfolio, we aggregate using portfolio weights
+                        if specific_risk_series is not None and portfolio_weights is not None:
+                            # Align specific risk with portfolio weights
+                            common_tickers_spec = portfolio_weights.index.intersection(specific_risk_series.index)
+                            if len(common_tickers_spec) > 0:
+                                # Portfolio-specific variance = Σ_i (w_i² × σ²_i)
+                                # where σ²_i is the squared residual for stock i
+                                weights_aligned_spec = portfolio_weights.loc[common_tickers_spec]
+                                weights_aligned_spec = weights_aligned_spec / weights_aligned_spec.sum()  # Normalize
+                                specific_var_aligned = (specific_risk_series.loc[common_tickers_spec] ** 2)
+                                portfolio_specific_variance = (weights_aligned_spec ** 2 * specific_var_aligned).sum()
+                            else:
+                                # Fallback: use average specific variance
+                                portfolio_specific_variance = ((portfolio_weights ** 2).sum() * (specific_risk_per_stock ** 2)) if specific_risk_per_stock is not None else 0.0
+                        else:
+                            portfolio_specific_variance = 0.0
+                        
+                        # Total portfolio variance
+                        total_portfolio_variance = factor_variance + portfolio_specific_variance
+                        
+                        if total_portfolio_variance > 1e-10:
+                            # Compute risk contributions: RC_k = b_k × (Σ_f b)_k
+                            # (Σ_f b) is the marginal contribution vector
+                            marginal_contributions = factor_cov_subset.values @ portfolio_exposure_vector
                             
-                            # Total portfolio variance = factor variance + specific variance
-                            total_variance_with_specific = total_variance + portfolio_specific_var
+                            # Risk contribution for each factor: RC_k = b_k × (Σ_f b)_k
+                            for idx, factor_name in enumerate(common_factors):
+                                rc_k = portfolio_exposure_vector[idx] * marginal_contributions[idx]
+                                risk_contributions[factor_name] = float((rc_k / total_portfolio_variance) * 100)
                             
-                            # Compute contributions
-                            if total_variance_with_specific > 0:
-                                factor_risk_pct = (total_variance / total_variance_with_specific) * 100
-                                specific_risk_contribution = (portfolio_specific_var / total_variance_with_specific) * 100
-                                
-                                # Scale factor contributions to account for specific risk
-                                scale_factor = factor_risk_pct / 100.0
-                                for style_name in risk_contributions:
-                                    risk_contributions[style_name] = risk_contributions[style_name] * scale_factor
+                            # Specific risk contribution
+                            if portfolio_specific_variance > 0:
+                                specific_risk_contribution = float((portfolio_specific_variance / total_portfolio_variance) * 100)
+                            
+                            # Validate: Risk contributions should sum to 100% (approximately)
+                            # Note: Individual contributions can be negative if a factor reduces portfolio risk
+                            total_rc = sum(risk_contributions.values()) + specific_risk_contribution
+                            if abs(total_rc - 100.0) > 0.5:  # Allow 0.5% tolerance for numerical errors
+                                warnings.warn(f"[{date_obj}] Risk contributions sum to {total_rc:.2f}% instead of 100%")
+                            
+                            # Additional validation: verify total variance calculation
+                            computed_total_var = sum([rc / 100.0 * total_portfolio_variance for rc in risk_contributions.values()]) + \
+                                               (specific_risk_contribution / 100.0 * total_portfolio_variance)
+                            if abs(computed_total_var - total_portfolio_variance) > 1e-6:
+                                warnings.warn(f"[{date_obj}] Variance decomposition mismatch: {computed_total_var:.6f} vs {total_portfolio_variance:.6f}")
+                        else:
+                            # Zero or negative variance, set all contributions to 0
+                            for factor_name in common_factors:
+                                risk_contributions[factor_name] = 0.0
                 else:
+                    # No factor covariance or exposures available, set all to 0
                     for style_name in style_factors_ortho.columns:
                         risk_contributions[style_name] = 0.0
                 
                 # Sort by risk contribution
                 sorted_styles = sorted(risk_contributions.items(), key=lambda x: x[1], reverse=True)
                 
+                # Convert specific_risk_per_stock to scalar for output
+                specific_risk_scalar = float(specific_risk_per_stock) if specific_risk_per_stock is not None else None
+                
                 results[str(date_obj.date())] = {
                     "factors": [s[0] for s in sorted_styles],
                     "exposures": [round(portfolio_exposures.get(s[0], 0.0), 4) for s in sorted_styles],
                     "risk_contributions": [round(s[1], 2) for s in sorted_styles],
                     "specific_risk_contribution": round(specific_risk_contribution, 2),
-                    "specific_risk": round(specific_risk, 4) if specific_risk is not None else None,
+                    "specific_risk": round(specific_risk_scalar, 4) if specific_risk_scalar is not None else None,
+                    "total_portfolio_variance": round(total_portfolio_variance, 6) if total_portfolio_variance > 0 else None,
                     "pca_variance_explained": {
                         k: float(v) for k, v in model.pca_variance_explained.items()
                     }
