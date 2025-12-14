@@ -288,7 +288,10 @@
                     ? `Insufficient data: ${daysAvailable} trading days available. Rolling IC requires at least 60 trading days.`
                     : 'No valid Rolling IC data available';
                 document.getElementById('rolling-ic-chart').innerHTML = 
-                    `<p class="text-muted text-center py-5"><i class="fas fa-info-circle me-1"></i>${message}</p>`;
+                    `<div class="text-center py-5">
+                        <p class="text-muted mb-2"><i class="fas fa-info-circle me-1"></i>Rolling statistics begin once 60 trading days of data are available.</p>
+                        <p class="text-muted"><i class="fas fa-exclamation-triangle me-1"></i>${message}</p>
+                    </div>`;
                 return;
             }
             
@@ -378,7 +381,10 @@
                     ? `Insufficient data: ${daysAvailable} trading days available. Rolling ICIR requires at least 60 trading days.`
                     : 'No valid ICIR data available';
                 document.getElementById('rolling-icir-chart').innerHTML = 
-                    `<p class="text-muted text-center py-5"><i class="fas fa-info-circle me-1"></i>${message}</p>`;
+                    `<div class="text-center py-5">
+                        <p class="text-muted mb-2"><i class="fas fa-info-circle me-1"></i>ICIR = mean(IC_60d) / std(IC_60d)</p>
+                        <p class="text-muted"><i class="fas fa-exclamation-triangle me-1"></i>${message}</p>
+                    </div>`;
                 return;
             }
             
@@ -440,7 +446,10 @@
                     ? `Insufficient data: ${daysAvailable} trading days available. Rolling t-stat requires at least 60 trading days.`
                     : 'No valid t-stat data available';
                 document.getElementById('rolling-tstat-chart').innerHTML = 
-                    `<p class="text-muted text-center py-5"><i class="fas fa-info-circle me-1"></i>${message}</p>`;
+                    `<div class="text-center py-5">
+                        <p class="text-muted mb-2"><i class="fas fa-info-circle me-1"></i>t-stat = mean(IC_60d) / std(IC_60d) × √N</p>
+                        <p class="text-muted"><i class="fas fa-exclamation-triangle me-1"></i>${message}</p>
+                    </div>`;
                 return;
             }
             
