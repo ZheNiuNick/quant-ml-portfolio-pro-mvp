@@ -228,12 +228,16 @@ def compute_raw_factor_style_exposure(window_days: int = 60):
         # Create DataFrame
         attribution_df = pd.DataFrame(results)
         
-        # Save to parquet
+        # Save to parquet (also save as factor_style_attribution.parquet for API compatibility)
         output_path = DATA_FACTORS_DIR / "raw_factor_style_exposure.parquet"
+        output_path_legacy = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         attribution_df.to_parquet(output_path, index=False)
+        attribution_df.to_parquet(output_path_legacy, index=False)  # Also save with legacy name for API compatibility
         
-        print(f"\n✅ 原始因子风格暴露度数据已保存: {output_path}")
+        print(f"\n✅ 原始因子风格暴露度数据已保存:")
+        print(f"   - {output_path}")
+        print(f"   - {output_path_legacy} (for API compatibility)")
         print(f"\n📊 风格分布:")
         style_counts = attribution_df['dominant_style'].value_counts()
         for style, count in style_counts.items():

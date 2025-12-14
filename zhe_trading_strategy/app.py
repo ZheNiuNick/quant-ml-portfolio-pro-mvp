@@ -1083,17 +1083,17 @@ def factor_clusters():
         factor_stats["tstat"] = factor_stats["tstat"].fillna(0)
         
         # Load precomputed style exposure (for visualization/diagnostics)
-        attribution_path = DATA_FACTORS_DIR / "raw_factor_style_exposure.parquet"
+        # Try both file names for compatibility
+        attribution_path = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
         
         if not attribution_path.exists():
-            # Try legacy file name
-            legacy_path = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
-            if legacy_path.exists():
-                attribution_path = legacy_path
-                print("[WARN] Using legacy factor_style_attribution.parquet file")
+            # Try alternative name
+            alt_path = DATA_FACTORS_DIR / "raw_factor_style_exposure.parquet"
+            if alt_path.exists():
+                attribution_path = alt_path
             else:
                 # Fallback: assign all to Custom (should not happen if pipeline is run correctly)
-                print("[WARN] raw_factor_style_exposure.parquet not found, assigning all to Custom")
+                print("[WARN] factor_style_attribution.parquet not found, assigning all to Custom")
                 factor_stats["dominant_style"] = "Custom"
         else:
             # Load precomputed style exposure

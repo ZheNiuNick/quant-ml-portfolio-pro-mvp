@@ -151,8 +151,15 @@ class BarraStyleMapper:
                 if factor_name not in bucket_data.columns:
                     continue
                 
-                factor_values = bucket_data[factor_name].dropna()
-                if len(factor_values) == 0:
+                # Extract factor values as Series
+                factor_col = bucket_data[factor_name]
+                if isinstance(factor_col, pd.DataFrame):
+                    # If it's a DataFrame, take the first column
+                    factor_values = factor_col.iloc[:, 0].dropna()
+                else:
+                    factor_values = factor_col.dropna()
+                
+                if not isinstance(factor_values, pd.Series) or len(factor_values) == 0:
                     continue
                 
                 # Check variance
@@ -163,7 +170,7 @@ class BarraStyleMapper:
                 if pd.isna(std_val) or std_val < 1e-8:
                     continue
                 
-                # Winsorize and normalize
+                # Winsorize and normalize (cross-sectional across stocks for this date)
                 winsorized = self.barra_model.winsorize_cross_sectional(factor_values, date)
                 normalized = self.barra_model.zscore_normalize_cross_sectional(winsorized)
                 normalized_factors.append(normalized)

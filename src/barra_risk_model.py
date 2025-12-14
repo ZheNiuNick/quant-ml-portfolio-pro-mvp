@@ -141,40 +141,87 @@ class BarraRiskModel:
     
     def winsorize_cross_sectional(self, factor_values: pd.Series, date: pd.Timestamp) -> pd.Series:
         """
-        Winsorize factor values cross-sectionally for a given date
+        Winsorize factor values cross-sectionally for a given date.
+        
+        Cross-sectional winsorization means: for a given date, winsorize across stocks (axis=0),
+        not across time. This clips extreme values at the specified percentile thresholds.
         
         Args:
-            factor_values: Series of factor values for all stocks on a date
-            date: Date timestamp
+            factor_values: Series of factor values for all stocks on a date (stocks × 1)
+            date: Date timestamp (for reference, not used in calculation)
             
         Returns:
-            Winsorized Series
+            Winsorized Series with same index as input
         """
+        # Ensure we have a Series (not DataFrame)
+        if isinstance(factor_values, pd.DataFrame):
+            if factor_values.shape[1] == 1:
+                factor_values = factor_values.iloc[:, 0]
+            else:
+                raise ValueError(f"winsorize_cross_sectional expects Series, got DataFrame with {factor_values.shape[1]} columns")
+        
+        if not isinstance(factor_values, pd.Series):
+            raise ValueError(f"winsorize_cross_sectional expects pd.Series, got {type(factor_values)}")
+        
+        # Drop NaN values before computing quantiles
+        factor_values_clean = factor_values.dropna()
+        
+        if len(factor_values_clean) == 0:
+            return factor_values  # Return original if no valid data
+        
         q_low = self.winsorize_percentile
         q_high = 1 - self.winsorize_percentile
         
-        lower_bound = factor_values.quantile(q_low)
-        upper_bound = factor_values.quantile(q_high)
+        # Compute quantiles (cross-sectional across stocks for this date)
+        # Series.quantile() doesn't need axis, but we're explicit about cross-sectional meaning
+        lower_bound = factor_values_clean.quantile(q_low)
+        upper_bound = factor_values_clean.quantile(q_high)
         
-        return factor_values.clip(lower=lower_bound, upper=upper_bound)
+        # Handle case where quantiles are NaN or infinite
+        if pd.isna(lower_bound) or pd.isna(upper_bound) or np.isinf(lower_bound) or np.isinf(upper_bound):
+            return factor_values  # Return original if quantiles are invalid
+        
+        # Clip values (winsorize)
+        result = factor_values.clip(lower=lower_bound, upper=upper_bound)
+        
+        return result
     
     def zscore_normalize_cross_sectional(self, factor_values: pd.Series) -> pd.Series:
         """
-        Z-score normalize factor values cross-sectionally
+        Z-score normalize factor values cross-sectionally.
+        
+        Cross-sectional normalization means: for a given date, normalize across stocks (axis=0),
+        computing mean and std across all stocks for that date.
         
         Args:
-            factor_values: Series of factor values (already winsorized)
+            factor_values: Series of factor values (already winsorized, stocks × 1)
             
         Returns:
-            Z-score normalized Series
+            Z-score normalized Series: (factor_values - mean) / std, with same index as input
         """
+        # Ensure we have a Series
+        if isinstance(factor_values, pd.DataFrame):
+            if factor_values.shape[1] == 1:
+                factor_values = factor_values.iloc[:, 0]
+            else:
+                raise ValueError(f"zscore_normalize_cross_sectional expects Series, got DataFrame with {factor_values.shape[1]} columns")
+        
+        if not isinstance(factor_values, pd.Series):
+            raise ValueError(f"zscore_normalize_cross_sectional expects pd.Series, got {type(factor_values)}")
+        
+        # Compute mean and std (cross-sectional across stocks for this date)
         mean = factor_values.mean()
         std = factor_values.std()
         
-        if std > 1e-8:
-            return (factor_values - mean) / std
-        else:
+        # Handle edge cases
+        if pd.isna(std) or std < 1e-8:
+            # Return zeros if std is too small (constant or near-constant factor)
             return pd.Series(0.0, index=factor_values.index)
+        
+        # Z-score normalization
+        result = (factor_values - mean) / std
+        
+        return result
     
     def neutralize_factor(self, factor_values: pd.Series, 
                          market_cap: Optional[pd.Series] = None,
