@@ -170,13 +170,13 @@ def generate_ic_ir_for_existing_factors(cfg, start_date=None, end_date=None):
     # 将所有ICIR设置为NaN（由API计算）
     if 'icir' not in ic_df.columns:
         ic_df['icir'] = np.nan
-    
-    # 保存IC/ICIR数据
-    ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
-    ic_df.to_parquet(ic_store_path)
-    print(f"\n[成功] IC/ICIR数据已保存到 {ic_store_path}")
-    print(f"[Info] 总记录数: {len(ic_df)}")
-    print(f"[Info] 有效IC数: {ic_df['ic'].notna().sum()}")
+        
+        # 保存IC/ICIR数据
+        ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
+        ic_df.to_parquet(ic_store_path)
+        print(f"\n[成功] IC/ICIR数据已保存到 {ic_store_path}")
+        print(f"[Info] 总记录数: {len(ic_df)}")
+        print(f"[Info] 有效IC数: {ic_df['ic'].notna().sum()}")
     print(f"[Info] 日期范围: {ic_df['date'].min()} 到 {ic_df['date'].max()}")
     print(f"[Info] 交易天数: {ic_df['date'].nunique()}")
     if ic_df['date'].nunique() < 60:

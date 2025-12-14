@@ -330,7 +330,7 @@
         loadRollingICIR();
         loadRollingTStat();
     }
-    
+
     // 1. Load Rolling IC
     async function loadRollingIC() {
         if (!selectedRollingFactor) return;
@@ -480,13 +480,13 @@
             
             const chartEl = document.getElementById('rolling-icir-chart');
             if (chartEl) {
-                Plotly.newPlot('rolling-icir-chart', [trace], {
+            Plotly.newPlot('rolling-icir-chart', [trace], {
                     title: `Rolling ICIR (60D) - ${data.factor || selectedRollingFactor}`,
-                    xaxis: { title: 'Date' },
-                    yaxis: { title: 'ICIR Value' },
-                    hovermode: 'x unified',
-                    template: 'plotly_white'
-                });
+                xaxis: { title: 'Date' },
+                yaxis: { title: 'ICIR Value' },
+                hovermode: 'x unified',
+                template: 'plotly_white'
+            });
             }
         } catch (error) {
             console.error('Rolling ICIR Failed to load:', error);
