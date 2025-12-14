@@ -2,9 +2,9 @@
 data/factors/factor_store.parquet filter=lfs diff=lfs merge=lfs -text
 data/processed/prices.parquet filter=lfs diff=lfs merge=lfs -text
 duckdb/*.duckdb filter=lfs diff=lfs merge=lfs -text
-
 # 小文件直接提交到 Git（不使用 LFS）
 # outputs/backtests/*.parquet
 # outputs/backtests/*.json
 # data/factors/factor_ic_ir.parquet
 # outputs/portfolios/*.parquet
+data/factors/factor_style_attribution.parquet filter=lfs diff=lfs merge=lfs -text
