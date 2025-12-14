@@ -1082,21 +1082,21 @@ def factor_clusters():
         factor_stats["tstat"] = factor_stats["ic_mean"] / (factor_stats["ic_std"] / np.sqrt(factor_stats["ic_count"]))
         factor_stats["tstat"] = factor_stats["tstat"].fillna(0)
         
-        # Load precomputed style attribution
-        attribution_path = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
+        # Load precomputed style exposure (for visualization/diagnostics)
+        attribution_path = DATA_FACTORS_DIR / "raw_factor_style_exposure.parquet"
         
         if not attribution_path.exists():
-            # Fallback: use BarraStyleMapper for on-the-fly classification
-            # This is slower but works if precomputed data is missing
-            print("[WARN] factor_style_attribution.parquet not found, using fallback classification")
-            from src.barra_style_mapper import BarraStyleMapper
-            
-            mapper = BarraStyleMapper()
-            factor_stats["dominant_style"] = factor_stats["factor"].apply(
-                lambda f: mapper.get_raw_factor_to_style_bucket(f) or "Custom"
-            )
+            # Try legacy file name
+            legacy_path = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
+            if legacy_path.exists():
+                attribution_path = legacy_path
+                print("[WARN] Using legacy factor_style_attribution.parquet file")
+            else:
+                # Fallback: assign all to Custom (should not happen if pipeline is run correctly)
+                print("[WARN] raw_factor_style_exposure.parquet not found, assigning all to Custom")
+                factor_stats["dominant_style"] = "Custom"
         else:
-            # Load precomputed attribution
+            # Load precomputed style exposure
             attribution_df = pd.read_parquet(attribution_path)
             
             # Join with factor_stats
@@ -1106,7 +1106,7 @@ def factor_clusters():
                 how="left"
             )
             
-            # Fill missing values with "Custom"
+            # Fill missing values with "Custom" (should not happen if all factors are in attribution)
             factor_stats["dominant_style"] = factor_stats["dominant_style"].fillna("Custom")
         
         # Initialize clusters with canonical Barra-style categories
@@ -1131,14 +1131,14 @@ def factor_clusters():
             
             # Get top 2 style exposures for hover tooltip (if available)
             top_exposures = {}
-            if attribution_path.exists():
+            if Path(attribution_path).exists() and 'attribution_df' in locals():
                 factor_attr = attribution_df[attribution_df["factor"] == row["factor"]]
                 if not factor_attr.empty:
                     exposure_cols = [col for col in attribution_df.columns if col.startswith("style_exposure_")]
                     exposures = {}
                     for col in exposure_cols:
                         style_name = col.replace("style_exposure_", "")
-                        exposures[style_name] = factor_attr[col].iloc[0] if not pd.isna(factor_attr[col].iloc[0]) else 0.0
+                        exposures[style_name] = float(factor_attr[col].iloc[0]) if not pd.isna(factor_attr[col].iloc[0]) else 0.0
                     # Sort by absolute value and take top 2
                     sorted_exposures = sorted(exposures.items(), key=lambda x: abs(x[1]), reverse=True)
                     top_exposures = dict(sorted_exposures[:2])

@@ -133,6 +133,7 @@ def generate_barra_risk_exposure():
             for bucket_name, factor_patterns in model.factor_taxonomy.items():
                 bucket_factor_names = []
                 for pattern in factor_patterns:
+                    # Include ALL factors matching pattern (Alpha factors are raw factors too)
                     bucket_factor_names.extend([f for f in reference_factors.columns if pattern in f])
                 
                 if len(bucket_factor_names) == 0:

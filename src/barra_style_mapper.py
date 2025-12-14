@@ -72,30 +72,28 @@ class BarraStyleMapper:
     
     def get_raw_factor_to_style_bucket(self, factor_name: str) -> Optional[str]:
         """
-        Classify a raw (non-Alpha) factor into a style bucket using pattern matching.
+        Classify a raw factor into a style bucket using pattern matching.
         
-        This is used for non-Alpha factors (TA-Lib, custom indicators, etc.)
-        Alpha factors should use compute_factor_style_exposure() instead.
+        This is used for initial classification during style construction.
+        Note: Alpha factors are treated as raw factors and can match patterns if applicable.
+        If no pattern matches, the factor goes to 'Unclassified' bucket.
         
         Args:
-            factor_name: Name of the factor
+            factor_name: Name of the factor (including Alpha factors)
             
         Returns:
-            Style bucket name, or None if not matched (should be treated as Custom)
+            Style bucket name, or None if not matched (will go to Unclassified)
         """
         taxonomy = self.barra_model.factor_taxonomy
         
-        # Exclude Alpha factors - they need exposure-based classification
-        if factor_name.startswith('Alpha'):
-            return None
-        
         # Pattern matching (same logic as BarraRiskModel.classify_factors)
+        # Alpha factors are treated the same as other raw factors
         for bucket_name, patterns in taxonomy.items():
             for pattern in patterns:
                 if pattern in factor_name:
                     return bucket_name
         
-        # Not matched - return None (caller should treat as Custom)
+        # Not matched - return None (caller should treat as Unclassified)
         return None
     
     def compute_style_factor_scores(self, date_factors_df: pd.DataFrame,
@@ -127,14 +125,15 @@ class BarraStyleMapper:
         if date_factors_df.empty:
             return pd.DataFrame()
         
-        # Step 1: Classify factors into buckets (exclude Alpha factors)
+        # Step 1: Classify factors into buckets (include ALL factors including Alpha)
         taxonomy = self.barra_model.factor_taxonomy
         bucket_factors = {}
         
         for bucket_name, patterns in taxonomy.items():
             bucket_factor_names = []
             for pattern in patterns:
-                bucket_factor_names.extend([f for f in date_factors_df.columns if pattern in f and not f.startswith('Alpha')])
+                # Include ALL factors matching pattern (Alpha factors are raw factors too)
+                bucket_factor_names.extend([f for f in date_factors_df.columns if pattern in f])
             if len(bucket_factor_names) > 0:
                 bucket_factors[bucket_name] = bucket_factor_names
         

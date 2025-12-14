@@ -63,10 +63,12 @@ class BarraRiskModel:
     
     def _define_factor_taxonomy(self) -> Dict[str, List[str]]:
         """
-        Define factor taxonomy - classify raw factors into style buckets
+        Define factor taxonomy - classify raw factors into style buckets for construction.
         
-        CRITICAL: Alpha factors (Alpha1-Alpha101) are EXCLUDED as they are alpha signals,
-        not risk factors. They contribute only to expected return and specific risk.
+        CRITICAL: Alpha factors (Alpha1-Alpha101) are RAW FACTORS, not alpha signals.
+        They participate in building style factors just like RSI, MACD, etc.
+        Unclassified factors (including Alpha factors that don't match patterns) go to 'Unclassified'
+        and will still participate in style construction.
         
         Returns:
             Dictionary mapping style bucket names to lists of factor patterns
@@ -101,10 +103,13 @@ class BarraRiskModel:
     
     def classify_factors(self, factor_names: List[str]) -> Dict[str, List[str]]:
         """
-        Classify raw factors into style buckets
+        Classify raw factors into style buckets for construction.
+        
+        CRITICAL: Alpha factors (Alpha1-Alpha101) are RAW FACTORS, not alpha signals.
+        They participate in building style factors just like RSI, MACD, etc.
         
         Args:
-            factor_names: List of raw factor names
+            factor_names: List of raw factor names (including Alpha factors)
             
         Returns:
             Dictionary mapping style bucket names to lists of classified factors
@@ -112,14 +117,8 @@ class BarraRiskModel:
         classified = {bucket: [] for bucket in self.factor_taxonomy.keys()}
         classified['Unclassified'] = []
         
-        # Exclude Alpha factors (they are alpha signals, not risk factors)
-        alpha_factors = [f for f in factor_names if f.startswith('Alpha')]
-        if alpha_factors:
-            print(f"[Barra] Excluding {len(alpha_factors)} Alpha factors (alpha signals, not risk factors)")
-        
-        risk_factors = [f for f in factor_names if not f.startswith('Alpha')]
-        
-        for factor_name in risk_factors:
+        # Include ALL factors (including Alpha factors) - they are all raw factors
+        for factor_name in factor_names:
             classified_flag = False
             for bucket_name, patterns in self.factor_taxonomy.items():
                 for pattern in patterns:
@@ -131,6 +130,8 @@ class BarraRiskModel:
                     break
             
             if not classified_flag:
+                # Alpha factors and other unclassified factors go to Unclassified
+                # They will be included in style construction but not assigned to a specific style bucket
                 classified['Unclassified'].append(factor_name)
         
         # Remove empty buckets
