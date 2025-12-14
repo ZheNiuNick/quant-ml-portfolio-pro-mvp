@@ -38,15 +38,19 @@ class BarraStyleMapper:
     - Dominant style assignment
     """
     
+    # Canonical Barra-style factors (single source of truth)
+    # Used by both Multi-Factor Risk Exposure and Factor Distribution
     CANONICAL_STYLES = [
-        "Price/Level",
-        "Trend",
         "Momentum",
+        "Trend",
         "Volatility",
         "Liquidity",
-        "Quality/Stability",
-        "Custom"
+        "Price/Level",
+        # "Quality/Stability"  # Optional, include if needed
     ]
+    
+    # Custom is only assigned when max_abs_exposure < threshold
+    CUSTOM_THRESHOLD = 0.05
     
     def __init__(self, winsorize_percentile: float = 0.025, 
                  pca_variance_threshold: float = 0.5):

@@ -81,6 +81,11 @@ def compute_raw_factor_style_exposure(window_days: int = 60):
         # Initialize mapper
         mapper = BarraStyleMapper()
         
+        # Use canonical styles (single source of truth)
+        # Filter to only include styles that exist in mapper
+        style_names = [s for s in mapper.CANONICAL_STYLES if s in mapper.CANONICAL_STYLES]
+        print(f"\n📋 使用规范风格因子: {style_names}")
+        
         # Step 1: Estimate fixed PCA/orthogonalization structure from the window
         print("\n🔧 估计固定 PCA 和正交化结构...")
         fixed_structure = _estimate_fixed_structure(mapper, factor_store, window_dates)
@@ -130,8 +135,9 @@ def compute_raw_factor_style_exposure(window_days: int = 60):
         all_factor_names = factor_store.columns.tolist()
         print(f"\n📊 计算 {len(all_factor_names)} 个原始因子的风格暴露度...")
         
-        style_names = mapper.CANONICAL_STYLES
-        results = []
+        # Build canonical exposure matrix: factor_style_exposure[factor, style]
+        exposure_matrix_rows = []  # For canonical matrix format
+        attribution_rows = []  # For backward compatibility (wide format)
         
         for idx, factor_name in enumerate(all_factor_names, 1):
             if idx % 50 == 0 or idx == 1 or idx == len(all_factor_names):
@@ -208,10 +214,19 @@ def compute_raw_factor_style_exposure(window_days: int = 60):
                         exposures[style] = 0.0
                 
                 # Assign dominant style based on max absolute exposure
-                dominant_style = mapper.assign_dominant_style(exposures, min_abs_exposure=0.05)
+                dominant_style = mapper.assign_dominant_style(exposures, min_abs_exposure=mapper.CUSTOM_THRESHOLD)
             
-            # Build result row
-            result_row = {
+            # Build canonical matrix rows (long format: factor, style, exposure)
+            for style in style_names:
+                exposure_value = exposures.get(style, 0.0)
+                exposure_matrix_rows.append({
+                    'factor': factor_name,
+                    'style': style,
+                    'exposure': float(exposure_value)
+                })
+            
+            # Build attribution row (wide format for backward compatibility)
+            attribution_row = {
                 'factor': factor_name,
                 'dominant_style': dominant_style,
                 'window_start': window_start,
@@ -219,29 +234,45 @@ def compute_raw_factor_style_exposure(window_days: int = 60):
                 'n_days': len(valid_dates)
             }
             
-            # Add style exposures
-            for style in style_names:
-                result_row[f'style_exposure_{style}'] = exposures.get(style, 0.0)
+            # Add top style exposure
+            if exposures:
+                top_style = max(exposures.items(), key=lambda x: abs(x[1]))[0]
+                attribution_row['top_style_exposure'] = float(exposures[top_style])
+            else:
+                attribution_row['top_style_exposure'] = 0.0
             
-            results.append(result_row)
+            # Add style exposures (wide format)
+            for style in style_names:
+                attribution_row[f'style_exposure_{style}'] = exposures.get(style, 0.0)
+            
+            attribution_rows.append(attribution_row)
         
-        # Create DataFrame
-        attribution_df = pd.DataFrame(results)
+        # Create canonical matrix (long format: factor, style, exposure)
+        # This is the SINGLE SOURCE OF TRUTH used by both pages
+        exposure_matrix_df = pd.DataFrame(exposure_matrix_rows)
         
-        # Save to parquet (also save as factor_style_attribution.parquet for API compatibility)
-        output_path = DATA_FACTORS_DIR / "raw_factor_style_exposure.parquet"
-        output_path_legacy = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        attribution_df.to_parquet(output_path, index=False)
-        attribution_df.to_parquet(output_path_legacy, index=False)  # Also save with legacy name for API compatibility
+        # Create attribution DataFrame (wide format for backward compatibility)
+        attribution_df = pd.DataFrame(attribution_rows)
         
-        print(f"\n✅ 原始因子风格暴露度数据已保存:")
-        print(f"   - {output_path}")
-        print(f"   - {output_path_legacy} (for API compatibility)")
+        # Save canonical matrix (single source of truth)
+        canonical_matrix_path = DATA_FACTORS_DIR / "factor_style_exposure.parquet"
+        canonical_matrix_path.parent.mkdir(parents=True, exist_ok=True)
+        exposure_matrix_df.to_parquet(canonical_matrix_path, index=False)
+        
+        # Also save wide format for API compatibility
+        attribution_path = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
+        attribution_df.to_parquet(attribution_path, index=False)
+        
+        print(f"\n✅ 规范风格暴露度矩阵已保存 (单一数据源):")
+        print(f"   - {canonical_matrix_path} (规范格式: factor, style, exposure)")
+        print(f"   - {attribution_path} (宽格式，向后兼容)")
         print(f"\n📊 风格分布:")
         style_counts = attribution_df['dominant_style'].value_counts()
         for style, count in style_counts.items():
             print(f"  {style}: {count} 个因子")
+        print(f"\n📐 规范矩阵形状: {exposure_matrix_df.shape}")
+        print(f"   因子数: {exposure_matrix_df['factor'].nunique()}")
+        print(f"   风格数: {exposure_matrix_df['style'].nunique()}")
         
         return True
         

@@ -739,16 +739,16 @@
         // Dynamically get categories from API response (Barra-style categories)
         const categories = Object.keys(data.clusters).sort();
         
-        // Color scheme matching Barra-style risk exposure colors
-        // Colors should match the visual style used in Risk Exposure charts
+        // Color scheme matching Barra-style risk exposure colors (MUST MATCH EXACTLY)
+        // This ensures visual consistency across Multi-Factor Risk Exposure and Factor Distribution
         const barraColorMap = {
-            'Price/Level': '#2E86AB',      // Blue
-            'Trend': '#A23B72',            // Purple
             'Momentum': '#F18F01',         // Orange
+            'Trend': '#A23B72',            // Purple
             'Volatility': '#C73E1D',       // Red
             'Liquidity': '#6A994E',        // Green
-            'Quality/Stability': '#BC4749', // Dark red
-            'Custom': '#8B7E74'            // Gray
+            'Price/Level': '#2E86AB',      // Blue
+            'Quality/Stability': '#BC4749', // Dark red (optional)
+            'Custom': '#8B7E74'            // Gray (fallback only)
         };
         
         // Create scatter plot (IC vs ICIR)
