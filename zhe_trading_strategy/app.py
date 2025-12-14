@@ -1111,7 +1111,7 @@ def factor_clusters():
             if factor_exposures.empty:
                 # Factor not in matrix, assign Custom
                 dominant_styles.append("Custom")
-                top_exposures_list.append(0.0)
+                top_exposures_list.append(f"Below threshold (<{CUSTOM_THRESHOLD})")
                 top_exposures_dict_list.append({})
             else:
                 # Pivot exposures into dictionary: {style: exposure}
@@ -1120,22 +1120,28 @@ def factor_clusters():
                 # Compute dominant_style = argmax(abs(exposure))
                 if exposures_dict:
                     max_abs_exposure = max(abs(v) for v in exposures_dict.values())
-                    dominant_style = max(exposures_dict.items(), key=lambda x: abs(x[1]))[0]
                     
-                    # Assign Custom ONLY IF max_abs_exposure < threshold
+                    # AUTHORITATIVE RULE: If max_abs_exposure < threshold, assign Custom
                     if max_abs_exposure < CUSTOM_THRESHOLD:
                         dominant_style = "Custom"
-                    
-                    # Get top 2 exposures for tooltip (sorted by absolute value)
-                    sorted_exposures = sorted(exposures_dict.items(), key=lambda x: abs(x[1]), reverse=True)
-                    top_2_exposures = dict(sorted_exposures[:2])
+                        # Custom factors: TopStyleExposure MUST be "Below threshold (<threshold>)"
+                        # NEVER show a style name or numeric exposure
+                        top_exposures_list.append(f"Below threshold (<{CUSTOM_THRESHOLD})")
+                        top_exposures_dict_list.append({})  # No style exposures for Custom
+                    else:
+                        # Valid style factor: assign dominant style and show exposure
+                        dominant_style = max(exposures_dict.items(), key=lambda x: abs(x[1]))[0]
+                        # Get top 2 exposures for tooltip (sorted by absolute value)
+                        sorted_exposures = sorted(exposures_dict.items(), key=lambda x: abs(x[1]), reverse=True)
+                        top_2_exposures = dict(sorted_exposures[:2])
+                        top_exposures_list.append(f"{dominant_style}: {max_abs_exposure:.4f}")
+                        top_exposures_dict_list.append(top_2_exposures)
                     
                     dominant_styles.append(dominant_style)
-                    top_exposures_list.append(float(max_abs_exposure))
-                    top_exposures_dict_list.append(top_2_exposures)
                 else:
+                    # Empty exposures_dict, assign Custom
                     dominant_styles.append("Custom")
-                    top_exposures_list.append(0.0)
+                    top_exposures_list.append(f"Below threshold (<{CUSTOM_THRESHOLD})")
                     top_exposures_dict_list.append({})
         
         # Add computed columns to factor_stats
@@ -1171,29 +1177,83 @@ def factor_clusters():
             if not isinstance(top_exposures, dict):
                 top_exposures = {}
             
-            # Validate top_style_exposure is numeric
-            top_style_exposure_value = row.get("top_style_exposure", 0.0)
-            if pd.isna(top_style_exposure_value):
-                top_style_exposure_value = 0.0
-            else:
-                top_style_exposure_value = float(top_style_exposure_value)
+            # Get top_style_exposure (string format: "Style: value" or "Below threshold (<threshold>)")
+            top_style_exposure_str = row.get("top_style_exposure", f"Below threshold (<{CUSTOM_THRESHOLD})")
+            if not isinstance(top_style_exposure_str, str):
+                # Legacy numeric format, convert to string
+                if dominant_style == "Custom":
+                    top_style_exposure_str = f"Below threshold (<{CUSTOM_THRESHOLD})"
+                else:
+                    top_style_exposure_str = f"{dominant_style}: {float(top_style_exposure_str):.4f}"
             
-            clusters[dominant_style].append({
+            # HARD VALIDATION: Ensure Custom factors NEVER show style name or number
+            if dominant_style == "Custom":
+                if ":" in top_style_exposure_str or any(char.isdigit() and float(char) >= CUSTOM_THRESHOLD for char in top_style_exposure_str.split() if char.replace('.', '').replace('-', '').isdigit()):
+                    # Invalid: Custom with style name/number, enforce correct format
+                    top_style_exposure_str = f"Below threshold (<{CUSTOM_THRESHOLD})"
+                    top_exposures = {}  # Clear exposures dict
+            
+            # Detect degenerate factors (zero IC, N/A ICIR, zero exposure)
+            ic_mean_val = float(row["ic_mean"]) if not pd.isna(row["ic_mean"]) else 0.0
+            is_degenerate = False
+            
+            # Check if factor is degenerate:
+            # - Mean IC is exactly 0 (constant/degenerate factor)
+            # - ICIR is N/A (insufficient data)
+            # - Dominant style is Custom AND max exposure is exactly 0
+            if abs(ic_mean_val) < 1e-8:
+                is_degenerate = True
+            if icir_value is None:
+                is_degenerate = True
+            if dominant_style == "Custom" and top_exposures == {} and "Below threshold" not in str(top_style_exposure_str):
+                is_degenerate = True
+            
+            # Store degenerate flag for filtering
+            factor_data = {
                 "name": row["factor"],
-                "ic_mean": float(row["ic_mean"]) if not pd.isna(row["ic_mean"]) else 0.0,
+                "ic_mean": ic_mean_val,
                 "icir": icir_value,  # May be None (NaN)
                 "tstat": float(row["tstat"]) if not pd.isna(row["tstat"]) else 0.0,
                 "dominant_style": dominant_style,
-                "top_style_exposure": top_style_exposure_value,  # Numeric, never N/A
-                "top_exposures": top_exposures  # Dict with top 2 exposures for tooltip
-            })
+                "top_style_exposure": top_style_exposure_str,  # String format
+                "top_exposures": top_exposures,  # Dict with top 2 exposures for tooltip
+                "is_degenerate": is_degenerate  # Flag for filtering
+            }
+            
+            clusters[dominant_style].append(factor_data)
+        
+        # Separate Custom factors and valid economic styles
+        # Custom is NOT an economic style, so we separate it for presentation
+        custom_factors = clusters.pop("Custom", [])
+        
+        # Filter out degenerate factors from economic style clusters
+        valid_clusters = {}
+        degenerate_factors = []
+        
+        for style, factors in clusters.items():
+            valid_factors = []
+            for factor in factors:
+                if factor.get("is_degenerate", False):
+                    degenerate_factors.append(factor)
+                else:
+                    valid_factors.append(factor)
+            
+            if valid_factors:  # Only include styles with valid factors
+                valid_clusters[style] = valid_factors
         
         # Remove empty clusters
-        clusters = {k: v for k, v in clusters.items() if len(v) > 0}
+        valid_clusters = {k: v for k, v in valid_clusters.items() if len(v) > 0}
         
         return jsonify({
             "error": None,
-            "clusters": clusters
+            "clusters": valid_clusters,  # Only economic styles (no Custom)
+            "custom_factors": custom_factors,  # Custom factors (separate, not plotted)
+            "degenerate_factors": degenerate_factors,  # Degenerate factors (excluded)
+            "metadata": {
+                "custom_count": len(custom_factors),
+                "degenerate_count": len(degenerate_factors),
+                "total_factors": len(factor_stats)
+            }
         })
     except Exception as e:
         import traceback

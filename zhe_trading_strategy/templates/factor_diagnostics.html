@@ -744,8 +744,13 @@
                 return;
             }
         
-        // Dynamically get categories from API response (Barra-style categories)
-        const categories = Object.keys(data.clusters).sort();
+        // Get economic style categories (Custom is excluded from main plot)
+        const categories = Object.keys(data.clusters || {}).sort();
+        
+        // Get Custom and degenerate factors (separate from main plot)
+        const customFactors = data.custom_factors || [];
+        const degenerateFactors = data.degenerate_factors || [];
+        const metadata = data.metadata || {};
         
         // Color scheme matching Barra-style risk exposure colors (MUST MATCH EXACTLY)
         // This ensures visual consistency across Multi-Factor Risk Exposure and Factor Distribution
@@ -883,6 +888,52 @@
             });
         });
         tableHtml += '</tbody></table>';
+        
+        // Add Custom factors section (if any) - NOT as an economic style
+        if (customFactors.length > 0) {
+            tableHtml += `<div class="mt-4">
+                <h6 class="text-muted"><i class="fas fa-info-circle me-2"></i>Custom Factors (Below Exposure Threshold)</h6>
+                <p class="small text-muted mb-2">
+                    ${customFactors.length} factors classified as Custom (max absolute exposure < threshold). 
+                    These are residual/fallback classifications, not economic styles.
+                </p>
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Factor</th>
+                            <th>Mean IC</th>
+                            <th>ICIR</th>
+                            <th>Top Style Exposure</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            customFactors.slice(0, 10).forEach(factor => {  // Show first 10 Custom factors
+                const icir_display = (factor.icir !== null && factor.icir !== undefined) 
+                    ? factor.icir.toFixed(4) 
+                    : 'N/A';
+                tableHtml += `<tr>
+                    <td>${factor.name}</td>
+                    <td>${(factor.ic_mean || 0).toFixed(4)}</td>
+                    <td>${icir_display}</td>
+                    <td class="text-muted">${factor.top_style_exposure || 'Below threshold'}</td>
+                </tr>`;
+            });
+            if (customFactors.length > 10) {
+                tableHtml += `<tr><td colspan="4" class="text-muted text-center small">... and ${customFactors.length - 10} more Custom factors</td></tr>`;
+            }
+            tableHtml += `</tbody></table></div>`;
+        }
+        
+        // Add degenerate factors info (if any)
+        if (degenerateFactors.length > 0) {
+            tableHtml += `<div class="mt-3">
+                <p class="small text-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${degenerateFactors.length} degenerate factors excluded from plot (zero IC, N/A ICIR, or invalid data).
+                </p>
+            </div>`;
+        }
+        
         document.getElementById('factor-cluster-table').innerHTML = tableHtml;
         
         // Build explanation section dynamically based on Barra-style categories
