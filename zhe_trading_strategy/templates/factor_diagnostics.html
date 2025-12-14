@@ -788,14 +788,14 @@
                             hover += `<br>Dominant Style: ${f.dominant_style}`;
                         }
                         
-                        // Top Style Exposure (numeric, required - fail if missing for non-Custom)
-                        if (f.top_style_exposure !== undefined && f.top_style_exposure !== null) {
-                            const topExpValue = parseFloat(f.top_style_exposure);
-                            if (!isNaN(topExpValue)) {
-                                hover += `<br>Top Style Exposure: ${topExpValue.toFixed(3)}`;
-                            }
-                        } else if (f.dominant_style !== 'Custom') {
-                            console.error(`Missing top_style_exposure for factor ${f.name}`);
+                        // Top Style Exposure (string format: "Style: value" or "Below threshold (<threshold>)")
+                        if (f.top_style_exposure) {
+                            hover += `<br>Top Style Exposure: ${f.top_style_exposure}`;
+                        }
+                        
+                        // Validate Custom factors show correct format
+                        if (f.dominant_style === 'Custom' && f.top_style_exposure && f.top_style_exposure.includes(':')) {
+                            console.error(`Invalid Custom factor exposure format: ${f.name} shows ${f.top_style_exposure}`);
                         }
                         
                         // Top exposures dict (for detailed breakdown - top 2 styles)
@@ -855,25 +855,16 @@
                     ? factor.icir.toFixed(4) 
                     : 'N/A';
                 
-                // Get top style exposure for display (MUST be numeric, never N/A)
-                let topExposureDisplay = 'N/A';
-                if (factor.top_style_exposure !== undefined && factor.top_style_exposure !== null) {
-                    // Use top_style_exposure field (numeric)
-                    const topExposureValue = parseFloat(factor.top_style_exposure);
-                    if (!isNaN(topExposureValue)) {
-                        // Find the style name from top_exposures dict
-                        if (factor.top_exposures && Object.keys(factor.top_exposures).length > 0) {
-                            const topEntry = Object.entries(factor.top_exposures)[0];
-                            topExposureDisplay = `${topEntry[0]}: ${topExposureValue.toFixed(3)}`;
-                        } else {
-                            topExposureDisplay = `${factor.dominant_style}: ${topExposureValue.toFixed(3)}`;
-                        }
-                    }
-                }
+                // Get top style exposure for display
+                // Format: "Style: value" for valid styles, "Below threshold (<threshold>)" for Custom
+                let topExposureDisplay = factor.top_style_exposure || 'N/A';
                 
-                // Fail if top_style_exposure is missing (should never happen with canonical matrix)
-                if (topExposureDisplay === 'N/A' && factor.dominant_style !== 'Custom') {
-                    console.error(`Missing top_style_exposure for factor ${factor.name} with dominant_style ${factor.dominant_style}`);
+                // Validate Custom factors show correct format
+                if (factor.dominant_style === 'Custom') {
+                    if (topExposureDisplay.includes(':') || (!topExposureDisplay.includes('Below threshold'))) {
+                        console.error(`Invalid Custom factor exposure format for ${factor.name}: ${topExposureDisplay}`);
+                        topExposureDisplay = 'Below threshold';
+                    }
                 }
                 
                 tableHtml += `<tr>
