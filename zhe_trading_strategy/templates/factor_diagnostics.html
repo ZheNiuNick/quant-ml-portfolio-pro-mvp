@@ -767,18 +767,33 @@
                     type: 'scatter',
                     name: category,  // Use exact Barra category name
                     text: factors.map(f => {
-                        // Build hover text for each factor
-                        let hover = f.name;
+                        // Build hover text with factor metadata (MUST include numeric top_style_exposure)
+                        let hover = `<b>${f.name}</b>`;
+                        
+                        // Dominant style (required)
                         if (f.dominant_style) {
                             hover += `<br>Dominant Style: ${f.dominant_style}`;
                         }
+                        
+                        // Top Style Exposure (numeric, required - fail if missing for non-Custom)
+                        if (f.top_style_exposure !== undefined && f.top_style_exposure !== null) {
+                            const topExpValue = parseFloat(f.top_style_exposure);
+                            if (!isNaN(topExpValue)) {
+                                hover += `<br>Top Style Exposure: ${topExpValue.toFixed(3)}`;
+                            }
+                        } else if (f.dominant_style !== 'Custom') {
+                            console.error(`Missing top_style_exposure for factor ${f.name}`);
+                        }
+                        
+                        // Top exposures dict (for detailed breakdown - top 2 styles)
                         if (f.top_exposures && Object.keys(f.top_exposures).length > 0) {
                             const top2 = Object.entries(f.top_exposures)
                                 .slice(0, 2)
                                 .map(([style, exp]) => `${style}: ${parseFloat(exp).toFixed(3)}`)
                                 .join(', ');
-                            hover += `<br>Top Exposures: ${top2}`;
+                            hover += `<br>Top 2 Exposures: ${top2}`;
                         }
+                        
                         return hover;
                     }),
                     marker: { 
