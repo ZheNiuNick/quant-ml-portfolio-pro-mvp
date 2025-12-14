@@ -1043,8 +1043,15 @@ def long_short_performance():
 
 @app.route('/api/factor-diagnostics/clusters')
 def factor_clusters():
-    """因子簇分析（Momentum / Quality / Volatility）"""
+    """Factor Clusters Analysis using Barra-style classification
+    
+    Uses the SAME classification logic as Multi-Factor Risk Exposure (Barra-style).
+    All factors are classified according to Barra taxonomy.
+    """
     try:
+        # Import BarraRiskModel for classification
+        from src.barra_risk_model import BarraRiskModel
+        
         # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
         ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
         
@@ -1065,7 +1072,7 @@ def factor_clusters():
         
         factor_stats.columns = ["factor", "ic_mean", "ic_std", "ic_count"]
         
-        # 重新计算 ICIR (IC_mean / IC_std)，而不是从文件中读取（因为文件中的 icir 可能都是 0）
+        # 重新计算 ICIR (IC_mean / IC_std)
         factor_stats["icir"] = factor_stats.apply(
             lambda row: row["ic_mean"] / row["ic_std"] if row["ic_std"] > 0 else None,
             axis=1
@@ -1077,35 +1084,46 @@ def factor_clusters():
         factor_stats["tstat"] = factor_stats["ic_mean"] / (factor_stats["ic_std"] / np.sqrt(factor_stats["ic_count"]))
         factor_stats["tstat"] = factor_stats["tstat"].fillna(0)
         
-        # 因子分类（基于因子名称）
-        def classify_factor(factor_name):
-            name_lower = str(factor_name).lower()
-            if any(x in name_lower for x in ['momentum', 'mom', 'ret', 'return', 'alpha']):
-                return 'momentum'
-            elif any(x in name_lower for x in ['quality', 'roe', 'roa', 'profit', 'margin']):
-                return 'quality'
-            elif any(x in name_lower for x in ['vol', 'volatility', 'std', 'var', 'risk']):
-                return 'volatility'
-            elif any(x in name_lower for x in ['value', 'pe', 'pb', 'price']):
-                return 'value'
-            elif any(x in name_lower for x in ['size', 'market', 'cap', 'mkt']):
-                return 'size'
+        # Use BarraRiskModel classification logic
+        # Create a temporary model instance to access taxonomy
+        model = BarraRiskModel()
+        
+        # Get all unique factor names
+        all_factor_names = factor_stats["factor"].unique().tolist()
+        
+        # Classify factors using Barra taxonomy
+        # Note: BarraRiskModel.classify_factors() excludes Alpha factors,
+        # but for Factor Clusters Analysis we want to include ALL factors
+        # So we'll use the taxonomy directly to classify all factors
+        
+        # Helper function to classify a single factor using Barra taxonomy
+        def classify_factor_by_barra_taxonomy(factor_name: str) -> str:
+            """Classify factor using Barra taxonomy (includes Alpha factors)"""
+            for bucket_name, patterns in model.factor_taxonomy.items():
+                for pattern in patterns:
+                    if pattern in factor_name:
+                        return bucket_name
+            
+            # If not matched by taxonomy patterns:
+            # - Alpha factors go to "Custom" (they are signals, not risk factors)
+            # - Other unclassified factors go to "Custom"
+            if factor_name.startswith('Alpha'):
+                return 'Custom'
             else:
-                return 'other'
+                return 'Custom'  # Fallback to Custom for unclassified
         
-        factor_stats["category"] = factor_stats["factor"].apply(classify_factor)
+        # Classify all factors
+        factor_stats["category"] = factor_stats["factor"].apply(classify_factor_by_barra_taxonomy)
         
-        # 按类别分组
-        clusters = {
-            "momentum": [],
-            "quality": [],
-            "volatility": [],
-            "value": [],
-            "size": [],
-            "other": []
-        }
+        # Initialize clusters with Barra-style category names
+        # Use the same category names as Barra taxonomy
+        barra_categories = list(model.factor_taxonomy.keys())  # Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom
+        clusters = {category: [] for category in barra_categories}
         
+        # Group factors by category
         for _, row in factor_stats.iterrows():
+            category = row["category"]
+            
             # ICIR 如果是 NaN，不转换为 0，而是保持为 None（前端会处理）
             icir_value = row["icir"]
             if pd.isna(icir_value):
@@ -1113,12 +1131,15 @@ def factor_clusters():
             else:
                 icir_value = float(icir_value)
             
-            clusters[row["category"]].append({
+            clusters[category].append({
                 "name": row["factor"],
                 "ic_mean": float(row["ic_mean"]) if not pd.isna(row["ic_mean"]) else 0.0,
                 "icir": icir_value,  # 可能是 None（NaN）
                 "tstat": float(row["tstat"]) if not pd.isna(row["tstat"]) else 0.0
             })
+        
+        # Remove empty clusters
+        clusters = {k: v for k, v in clusters.items() if len(v) > 0}
         
         return jsonify({
             "error": None,

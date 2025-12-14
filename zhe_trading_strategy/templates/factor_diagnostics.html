@@ -138,19 +138,7 @@
             </div>
         </div>
 
-        <!-- 4. Factor Clusters Analysis -->
-        <div class="card diagnostic-card">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-layer-group me-2"></i>Factor Clusters Analysis (Momentum / Quality / Volatility)</h5>
-            </div>
-            <div class="card-body">
-                <div id="factor-cluster-chart" class="chart-container"></div>
-                <div id="factor-cluster-table" class="mt-3"></div>
-                <div id="factor-cluster-explanation"></div>
-            </div>
-        </div>
-
-        <!-- 5. Factor Correlation Matrix -->
+        <!-- 4. Factor Correlation Matrix -->
         <div class="card diagnostic-card">
             <div class="card-header bg-dark text-white">
                 <h5 class="mb-0"><i class="fas fa-th me-2"></i>Factor Correlation Matrix</h5>
@@ -179,6 +167,21 @@
                 <div id="risk-exposure-chart" class="chart-container"></div>
                 <div id="risk-exposure-table" class="mt-3"></div>
                 <div id="risk-exposure-explanation"></div>
+            </div>
+        </div>
+
+        <!-- 7. Factor Distribution by Barra Style (IC vs ICIR) -->
+        <div class="card diagnostic-card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-layer-group me-2"></i>Factor Distribution by Barra Style (IC vs ICIR)</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info small mb-3" role="alert">
+                    <strong>Note:</strong> This is NOT machine learning clustering. Factors are grouped by Barra-style economic definitions used in the Multi-Factor Risk Exposure model. The purpose is to evaluate factor quality and stability within each risk style bucket.
+                </div>
+                <div id="factor-cluster-chart" class="chart-container"></div>
+                <div id="factor-cluster-table" class="mt-3"></div>
+                <div id="factor-cluster-explanation"></div>
             </div>
         </div>
     </div>
@@ -718,7 +721,7 @@
         }
     }
 
-    // 6. Load Factor Clusters Analysis
+    // 6. Load Factor Clusters Analysis (Barra-style)
     async function loadFactorClusters() {
         try {
             const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/clusters` : '/api/factor-diagnostics/clusters';
@@ -733,26 +736,41 @@
                 return;
             }
         
+        // Dynamically get categories from API response (Barra-style categories)
+        const categories = Object.keys(data.clusters).sort();
+        
+        // Color scheme matching Barra-style risk exposure colors
+        // Colors should match the visual style used in Risk Exposure charts
+        const barraColorMap = {
+            'Price/Level': '#2E86AB',      // Blue
+            'Trend': '#A23B72',            // Purple
+            'Momentum': '#F18F01',         // Orange
+            'Volatility': '#C73E1D',       // Red
+            'Liquidity': '#6A994E',        // Green
+            'Quality/Stability': '#BC4749', // Dark red
+            'Custom': '#8B7E74'            // Gray
+        };
+        
         // Create scatter plot (IC vs ICIR)
         const traces = [];
-        const categories = ['momentum', 'quality', 'volatility', 'value', 'size'];
-        const colors = ['#2196F3', '#9C27B0', '#FF9800', '#4CAF50', '#E91E63'];
         
-        categories.forEach((category, idx) => {
+        categories.forEach((category) => {
             const factors = data.clusters[category] || [];
             if (factors.length > 0) {
                 const ic_values = factors.map(f => f.ic_mean || 0);
-                const icir_values = factors.map(f => f.icir || 0);
+                const icir_values = factors.map(f => (f.icir !== null && f.icir !== undefined) ? f.icir : 0);
                 
                 traces.push({
                     x: ic_values,
                     y: icir_values,
                     mode: 'markers',
                     type: 'scatter',
-                    name: category.charAt(0).toUpperCase() + category.slice(1),
+                    name: category,  // Use exact Barra category name
                     text: factors.map(f => f.name),
-                    textposition: 'top center',
-                    marker: { size: 12, color: colors[idx] },
+                    marker: { 
+                        size: 12, 
+                        color: barraColorMap[category] || '#666666'  // Use mapped color or gray default
+                    },
                     hovertemplate: '<b>%{text}</b><br>Mean IC: %{x:.4f}<br>ICIR: %{y:.4f}<extra></extra>'
                 });
             }
@@ -760,7 +778,7 @@
         
         Plotly.newPlot('factor-cluster-chart', traces, {
             title: {
-                text: 'Factor Clusters Analysis (IC vs ICIR)',
+                text: 'Factor Distribution by Barra Style (IC vs ICIR)',
                 font: { size: 18 }
             },
             xaxis: { 
@@ -786,16 +804,19 @@
             }
         });
         
-        // Show factor clusters table
-        let tableHtml = '<table class="table table-striped"><thead><tr><th>Category</th><th>Factor</th><th>Mean IC</th><th>ICIR</th><th>t-stat</th></tr></thead><tbody>';
+        // Show factor clusters table (dynamically using categories from API)
+        let tableHtml = '<table class="table table-striped"><thead><tr><th>Barra Style</th><th>Factor</th><th>Mean IC</th><th>ICIR</th><th>t-stat</th></tr></thead><tbody>';
         categories.forEach(category => {
             const factors = data.clusters[category] || [];
             factors.forEach(factor => {
+                const icir_display = (factor.icir !== null && factor.icir !== undefined) 
+                    ? factor.icir.toFixed(4) 
+                    : 'N/A';
                 tableHtml += `<tr>
-                    <td><span class="factor-category ${category}">${category}</span></td>
+                    <td><strong>${category}</strong></td>
                     <td>${factor.name}</td>
                     <td>${(factor.ic_mean || 0).toFixed(4)}</td>
-                    <td>${(factor.icir || 0).toFixed(4)}</td>
+                    <td>${icir_display}</td>
                     <td>${(factor.tstat || 0).toFixed(2)}</td>
                 </tr>`;
             });
@@ -803,66 +824,72 @@
         tableHtml += '</tbody></table>';
         document.getElementById('factor-cluster-table').innerHTML = tableHtml;
         
-        // Build explanation section dynamically based on existing categories
-        const categoryDescriptions = {
-            'momentum': {
-                icon: 'fa-chart-line',
-                emoji: '📈',
-                title: 'Momentum Factors',
-                class: 'text-primary',
-                description: 'Momentum factors capture the tendency of stock prices to continue their trends. Factors include past N-day returns, relative strength indicators, and price trend patterns. <strong>High IC values</strong> indicate that stocks with strong past performance are more likely to continue outperforming. These factors work best when market trends are persistent.'
-            },
-            'quality': {
-                icon: 'fa-gem',
-                emoji: '💎',
-                title: 'Quality Factors',
-                class: 'text-purple',
-                description: 'Quality factors measure a company\'s financial health and profitability, including ROE, ROA, profit margins, debt ratios, and earnings stability. High-quality companies typically deliver better long-term returns with lower volatility. <strong>Consistently positive IC</strong> suggests that fundamental quality is rewarded over time, suitable for long-term holding strategies.'
-            },
-            'volatility': {
-                icon: 'fa-wave-square',
-                emoji: '📊',
-                title: 'Volatility Factors',
-                class: 'text-warning',
-                description: 'Volatility factors reflect price uncertainty and risk. Low volatility stocks tend to have lower risk but may miss high-return opportunities. These include historical volatility, downside volatility, and risk-adjusted returns. <strong>Negative IC</strong> may indicate market preference for low-volatility stocks (risk-aversion behavior).'
-            },
-            'value': {
+        // Build explanation section dynamically based on Barra-style categories
+        const barraCategoryDescriptions = {
+            'Price/Level': {
                 icon: 'fa-dollar-sign',
-                emoji: '💰',
-                title: 'Value Factors',
-                class: 'text-success',
-                description: 'Value factors identify undervalued stocks using valuation metrics like P/E, P/B, EV/EBITDA, and price-to-sales ratios. Value investing seeks stocks trading below their intrinsic value. <strong>Positive IC</strong> suggests mean reversion exists - cheap stocks tend to appreciate as the market corrects mispricing over time.'
+                title: 'Price/Level Factors',
+                class: 'text-primary',
+                description: 'Price and level factors measure absolute price levels, weighted prices, and Bollinger Band positions. These factors capture where stocks trade relative to recent price ranges. <strong>High IC values</strong> indicate that price levels contain predictive information about future returns.'
             },
-            'size': {
-                icon: 'fa-building',
-                emoji: '🏢',
-                title: 'Size Factors',
+            'Trend': {
+                icon: 'fa-chart-line',
+                title: 'Trend Factors',
+                class: 'text-info',
+                description: 'Trend factors capture price momentum through moving averages (SMA, EMA, WMA, DEMA) and MACD indicators. These factors identify stocks with persistent directional movements. <strong>Positive IC</strong> suggests that trends tend to continue, useful for trend-following strategies.'
+            },
+            'Momentum': {
+                icon: 'fa-rocket',
+                title: 'Momentum Factors',
+                class: 'text-warning',
+                description: 'Momentum factors measure price change rates (MOM, ROC), relative strength (RSI), stochastic indicators, and momentum oscillators (CCI, WILLR, ULTOSC). These factors capture short-term price acceleration. <strong>High ICIR</strong> indicates consistent momentum effects over time.'
+            },
+            'Volatility': {
+                icon: 'fa-wave-square',
+                title: 'Volatility Factors',
                 class: 'text-danger',
-                description: 'Size factors measure company market capitalization. Small-cap stocks typically exhibit higher volatility and potential returns due to the small-cap premium effect observed in long-term data. However, <strong>size effects vary with market cycles</strong> - large caps may outperform during risk-off periods, while small caps excel during risk-on periods.'
+                description: 'Volatility factors measure price uncertainty and risk (ATR, NATR, TRANGE, STDDEV, BB_WIDTH). Low volatility stocks may offer better risk-adjusted returns. <strong>Negative IC</strong> may indicate market preference for low-volatility stocks (risk-aversion behavior).'
+            },
+            'Liquidity': {
+                icon: 'fa-water',
+                title: 'Liquidity Factors',
+                class: 'text-success',
+                description: 'Liquidity factors measure trading activity and volume patterns (OBV, AD, ADOSC, MFI). These factors capture market participation and information flow. High liquidity often accompanies price movements, making these factors useful for confirming trends.'
+            },
+            'Quality/Stability': {
+                icon: 'fa-shield-alt',
+                title: 'Quality/Stability Factors',
+                class: 'text-secondary',
+                description: 'Quality and stability factors measure financial health and earnings consistency. These factors identify companies with strong fundamentals and predictable performance. <strong>Consistently positive IC</strong> suggests that quality is rewarded over time.'
+            },
+            'Custom': {
+                icon: 'fa-cog',
+                title: 'Custom Factors',
+                class: 'text-dark',
+                description: 'Custom factors include project-specific signals and Alpha factors. These are typically alpha signals rather than risk factors, but are included here for completeness. <strong>Evaluate individually</strong> based on IC, ICIR, and t-stat metrics.'
             }
         };
-        
-        // Find which categories actually exist in the data
-        const existingCategories = categories.filter(cat => {
-            const factors = data.clusters[cat] || [];
-            return factors.length > 0;
-        });
         
         // Build explanation HTML only for existing categories
         let leftColumnHtml = '';
         let rightColumnHtml = '';
         
-        existingCategories.forEach((category, index) => {
-            const desc = categoryDescriptions[category];
-            if (!desc) return; // Skip if description not defined
+        categories.forEach((category, index) => {
+            const desc = barraCategoryDescriptions[category];
+            if (!desc) {
+                // If category not in descriptions, create a generic entry
+                leftColumnHtml += `<h6 class="text-dark"><strong>${category}</strong></h6>`;
+                leftColumnHtml += `<p class="small mb-3">Factors classified under the ${category} style bucket according to Barra taxonomy.</p>`;
+                return;
+            }
             
             const categoryHtml = `
-                <h6 class="${desc.class}"><i class="fas ${desc.icon} me-2"></i>${desc.emoji} ${desc.title}</h6>
+                <h6 class="${desc.class}"><i class="fas ${desc.icon} me-2"></i>${desc.title}</h6>
                 <p class="small mb-3">${desc.description}</p>
             `;
             
             // Distribute categories between left and right columns
-            if (index < Math.ceil(existingCategories.length / 2)) {
+            if (index < Math.ceil(categories.length / 2)) {
                 leftColumnHtml += categoryHtml;
             } else {
                 rightColumnHtml += categoryHtml;
@@ -882,12 +909,15 @@
                 <li><strong>t-stat</strong>: Statistical significance. |t-stat| > 2 typically indicates 
                     significant factor performance (95% confidence level).</li>
             </ul>
+            <div class="alert alert-info small mt-3 mb-0">
+                <strong>Important:</strong> This analysis uses the <strong>same Barra-style classification</strong> as the Multi-Factor Risk Exposure model. Factors are grouped by economic definitions, not machine learning clustering. This ensures consistency across the entire factor diagnostics pipeline.
+            </div>
         `;
         
         // Build final explanation HTML
         const explanationHtml = `
             <div class="mt-4 p-4 bg-light rounded">
-                <h5><i class="fas fa-info-circle me-2"></i>Factor Cluster Analysis Interpretation</h5>
+                <h5><i class="fas fa-info-circle me-2"></i>Factor Distribution by Barra Style - Interpretation</h5>
                 <div class="row">
                     <div class="col-md-6">
                         ${leftColumnHtml}
@@ -900,7 +930,7 @@
         `;
         document.getElementById('factor-cluster-explanation').innerHTML = explanationHtml;
         } catch (error) {
-            console.error('Factor Clusters AnalysisFailed to load:', error);
+            console.error('Factor Clusters Analysis failed to load:', error);
             document.getElementById('factor-cluster-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
             document.getElementById('factor-cluster-table').innerHTML = '';
             document.getElementById('factor-cluster-explanation').innerHTML = '';
