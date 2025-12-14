@@ -867,76 +867,117 @@
             // Add/update explanation section (replace existing content to avoid duplicates)
             const explanationHtml = `
                 <div class="mt-4 p-4 bg-light rounded">
-                    <h6><i class="fas fa-info-circle me-2"></i>Multi-Factor Risk Exposure (Barra-style) Interpretation</h6>
-                    <div class="row">
+                    <h5><i class="fas fa-info-circle me-2"></i>Multi-Factor Risk Exposure (Barra-style) - Complete Interpretation</h5>
+                    
+                    <div class="row mt-3">
                         <div class="col-md-12">
-                            <h6><i class="fas fa-chart-bar me-2"></i>What is Barra-Style Risk Exposure?</h6>
+                            <h6><i class="fas fa-book me-2"></i>1. What is Barra-Style Risk Exposure?</h6>
                             <p class="small mb-3">
-                                This analysis uses a <strong>Barra-style multi-factor risk model</strong> to decompose portfolio risk. 
-                                Unlike raw factor analysis, this model:
-                            </p>
-                            <ul class="small mb-3">
-                                <li><strong>Groups raw factors</strong> into economically interpretable style buckets (Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom)</li>
-                                <li><strong>Excludes Alpha factors</strong> from risk modeling (Alpha factors contribute to expected returns and specific risk, not systematic risk)</li>
-                                <li><strong>Applies PCA</strong> within each style bucket to extract the dominant factor, reducing multicollinearity</li>
-                                <li><strong>Orthogonalizes style factors</strong> to ensure independent risk sources</li>
-                                <li><strong>Separates systematic risk</strong> (factor risk) from <strong>specific risk</strong> (idiosyncratic risk)</li>
-                            </ul>
-                            <p class="small mb-3">
-                                The displayed factors are <strong>style-level factors</strong>, not individual raw factors, providing a clean and interpretable risk decomposition.
+                                This analysis uses a <strong>Barra-style multi-factor risk model</strong> following industry-standard 
+                                principles to decompose portfolio risk into interpretable, independent sources. Unlike simple factor 
+                                analysis, this model transforms raw factors into orthogonal style factors that represent distinct 
+                                risk dimensions.
                             </p>
                             
-                            <h6><i class="fas fa-arrow-up me-2"></i>Positive Exposure</h6>
-                            <p class="small mb-3">
-                                A <strong>positive exposure</strong> (green bars) indicates the portfolio is 
-                                overweight in that factor. For example, a positive momentum exposure means the 
-                                portfolio holds more high-momentum stocks than the benchmark. This can be 
-                                intentional if the strategy aims to capture momentum effects.
+                            <h6><i class="fas fa-cogs me-2"></i>2. Methodology: Step-by-Step Process</h6>
+                            <ol class="small mb-3">
+                                <li><strong>Factor Classification:</strong> Groups 160+ raw factors into 7 economically meaningful 
+                                    style buckets (Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom). 
+                                    Alpha factors are excluded (they are signals, not risk factors).</li>
+                                <li><strong>Cross-Sectional Normalization:</strong> For each date, factors are winsorized (clipped 
+                                    at 1st/99th percentiles) and z-score normalized to ensure comparability across stocks.</li>
+                                <li><strong>Dimensionality Reduction (PCA):</strong> Within each style bucket, Principal Component 
+                                    Analysis extracts the first principal component (PC1) as the representative style factor, 
+                                    reducing multicollinearity while preserving the dominant risk dimension.</li>
+                                <li><strong>Orthogonalization:</strong> Gram-Schmidt process ensures style factors are approximately 
+                                    orthogonal (independent), allowing additive risk decomposition without double-counting.</li>
+                                <li><strong>Factor Return Estimation:</strong> Daily factor returns are estimated via cross-sectional 
+                                    regression: <code>r_{i,t+1} = Σ_k (β_{i,k,t} × f_{k,t+1}) + ε_{i,t+1}</code>, where exposures (β) 
+                                    are from time t and stock returns (r) are from time t+1 (no look-ahead bias).</li>
+                                <li><strong>Factor Covariance Matrix:</strong> Time-series covariance of factor returns is estimated 
+                                    using EWMA (Exponentially Weighted Moving Average) with λ=0.94: <code>Σ_f = Cov(factor_returns)</code>.</li>
+                                <li><strong>Risk Decomposition:</strong> Portfolio variance is computed as: 
+                                    <code>σ²_portfolio = b^T Σ_f b + σ²_specific</code>, where <code>b</code> is the vector of 
+                                    portfolio factor exposures.</li>
+                            </ol>
+                            
+                            <h6><i class="fas fa-calculator me-2"></i>3. Key Formulas</h6>
+                            <div class="small mb-3" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace;">
+                                <p><strong>Portfolio Factor Exposure:</strong></p>
+                                <p style="margin-left: 20px;">b_k = Σ_i (w_i × β_{i,k})</p>
+                                <p style="font-size: 0.9em; color: #666;">where w_i is portfolio weight for stock i, β_{i,k} is factor k exposure for stock i</p>
+                                
+                                <p class="mt-3"><strong>Portfolio Variance:</strong></p>
+                                <p style="margin-left: 20px;">σ²_portfolio = b^T Σ_f b + σ²_specific</p>
+                                <p style="font-size: 0.9em; color: #666;">where Σ_f is factor return covariance matrix, σ²_specific is idiosyncratic risk</p>
+                                
+                                <p class="mt-3"><strong>Factor Risk Contribution:</strong></p>
+                                <p style="margin-left: 20px;">RC_k = (b_k × (Σ_f b)_k) / σ²_portfolio × 100%</p>
+                                <p style="font-size: 0.9em; color: #666;">where (Σ_f b)_k is the k-th element of the marginal contribution vector</p>
+                                
+                                <p class="mt-3"><strong>Specific Risk:</strong></p>
+                                <p style="margin-left: 20px;">σ²_specific = Σ_i (w_i² × σ²_i)</p>
+                                <p style="font-size: 0.9em; color: #666;">where σ²_i is the residual variance from factor regression for stock i</p>
+                            </div>
+                            
+                            <h6><i class="fas fa-arrow-up me-2"></i>4. Exposure Interpretation</h6>
+                            <p class="small mb-2"><strong>Positive Exposure (b_k > 0):</strong></p>
+                            <p class="small mb-3" style="margin-left: 20px;">
+                                The portfolio is <strong>overweight</strong> in this factor relative to the benchmark. For example, 
+                                a positive momentum exposure means the portfolio holds more high-momentum stocks. This can be 
+                                intentional to capture momentum effects, but also increases exposure to momentum risk.
+                            </p>
+                            <p class="small mb-2"><strong>Negative Exposure (b_k < 0):</strong></p>
+                            <p class="small mb-3" style="margin-left: 20px;">
+                                The portfolio is <strong>underweight</strong> in this factor. For example, a negative value exposure 
+                                means the portfolio prefers growth stocks over value stocks. Negative exposures can serve as hedges 
+                                but also represent missed opportunities if the factor performs well.
                             </p>
                             
-                            <h6><i class="fas fa-arrow-down me-2"></i>Negative Exposure</h6>
-                            <p class="small mb-3">
-                                A <strong>negative exposure</strong> (red bars) indicates the portfolio is 
-                                underweight in that factor. For example, a negative value exposure means the 
-                                portfolio holds fewer value stocks than the benchmark, preferring growth stocks instead.
+                            <h6><i class="fas fa-percentage me-2"></i>5. Risk Contribution Interpretation</h6>
+                            <p class="small mb-2"><strong>Positive Risk Contribution (RC_k > 0):</strong></p>
+                            <p class="small mb-3" style="margin-left: 20px;">
+                                This factor <strong>increases</strong> portfolio variance. The magnitude |RC_k| shows what percentage 
+                                of total portfolio risk is attributed to this factor. Higher positive contributions indicate the 
+                                factor is a major driver of portfolio volatility.
+                            </p>
+                            <p class="small mb-2"><strong>Negative Risk Contribution (RC_k < 0):</strong></p>
+                            <p class="small mb-3" style="margin-left: 20px;">
+                                This factor <strong>reduces</strong> portfolio variance (hedging effect). This occurs when the factor 
+                                exposure (b_k) and marginal contribution ((Σ_f b)_k) have opposite signs. The magnitude |RC_k| still 
+                                represents the factor's impact magnitude, but the negative sign indicates risk reduction rather than 
+                                risk addition. This is mathematically valid and indicates the factor acts as a natural hedge.
+                            </p>
+                            <p class="small mb-3" style="background-color: #fff3cd; padding: 10px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                                <strong>Important:</strong> Risk contributions sum to 100% (including specific risk). The sign indicates 
+                                direction (risk addition vs. reduction), while the absolute value indicates magnitude. A negative 
+                                contribution means the factor is reducing portfolio risk, not that risk is negative.
                             </p>
                             
-                            <h6><i class="fas fa-percentage me-2"></i>Risk Contribution</h6>
+                            <h6><i class="fas fa-chart-line me-2"></i>6. Specific Risk</h6>
                             <p class="small mb-3">
-                                <strong>Risk Contribution (%)</strong> shows what percentage of the portfolio's 
-                                total risk comes from each factor. Factors with higher risk contributions should 
-                                be closely monitored, as they drive most of the portfolio's volatility. A 
-                                well-diversified portfolio typically has risk contributions spread across 
-                                multiple factors rather than concentrated in one or two.
-                            </p>
-                            <h6><i class="fas fa-percentage me-2"></i>Risk Contribution Interpretation</h6>
-                            <p class="small mb-3">
-                                <strong>Risk Contribution (%)</strong> shows what percentage of the portfolio's total risk 
-                                comes from each style factor. The contributions sum to 100% (or close to 100% if specific risk 
-                                is included separately).
-                            </p>
-                            <p class="small mb-3">
-                                <strong>Style Factor Distribution:</strong> In a well-balanced Barra model, risk is typically 
-                                distributed across multiple style factors. The concentration of risk in a few factors (e.g., 
-                                Liquidity, Momentum) indicates the portfolio's sensitivity to those particular risk dimensions.
-                            </p>
-                            <p class="small mb-3">
-                                <strong>Specific Risk:</strong> This represents idiosyncratic (stock-specific) risk that cannot 
+                                <strong>Specific Risk (σ²_specific)</strong> represents idiosyncratic (stock-specific) risk that cannot 
                                 be explained by systematic style factors. It captures company-specific events, earnings surprises, 
-                                and other non-systematic risks. A well-diversified portfolio typically has lower specific risk 
-                                contribution.
+                                management changes, and other non-systematic risks. For a well-diversified portfolio with N stocks, 
+                                specific risk contribution typically decreases as 1/N due to diversification. A high specific risk 
+                                contribution (>20%) may indicate insufficient diversification or concentrated positions.
                             </p>
                             
-                            <h6><i class="fas fa-lightbulb me-2"></i>How to Use This Analysis</h6>
+                            <h6><i class="fas fa-lightbulb me-2"></i>7. How to Use This Analysis</h6>
                             <ul class="small">
-                                <li><strong>Identify Concentration Risk:</strong> If one factor accounts for >50% 
-                                    of risk contribution, consider diversifying to reduce concentration.</li>
-                                <li><strong>Monitor Factor Drift:</strong> Track exposure changes over time to 
-                                    ensure the portfolio stays aligned with the intended strategy.</li>
-                                <li><strong>Factor Timing:</strong> Adjust exposures based on market conditions 
-                                    (e.g., increase quality exposure during market stress).</li>
-                                <li><strong>Rebalancing Signal:</strong> Large exposure changes may indicate 
-                                    the need for portfolio rebalancing to maintain target factor weights.</li>
+                                <li><strong>Identify Concentration Risk:</strong> If one factor accounts for >50% of absolute risk 
+                                    contribution, consider diversifying to reduce concentration. High concentration increases 
+                                    vulnerability to that factor's performance.</li>
+                                <li><strong>Monitor Factor Drift:</strong> Track exposure changes over time. Large shifts may indicate 
+                                    unintended style drift or market-driven changes requiring rebalancing.</li>
+                                <li><strong>Understand Hedging Effects:</strong> Negative risk contributions indicate natural hedges. 
+                                    Ensure these are intentional rather than accidental, and consider if they align with your strategy.</li>
+                                <li><strong>Factor Timing:</strong> Adjust exposures based on market conditions. For example, increase 
+                                    quality exposure during market stress, or momentum exposure during trending markets.</li>
+                                <li><strong>Rebalancing Signal:</strong> Large exposure or risk contribution changes may indicate the 
+                                    need for portfolio rebalancing to maintain target factor weights and risk budget.</li>
+                                <li><strong>Risk Budgeting:</strong> Use risk contributions to allocate risk budget across factors. 
+                                    Ensure no single factor dominates unless intentional (e.g., factor-tilting strategies).</li>
                             </ul>
                         </div>
                     </div>

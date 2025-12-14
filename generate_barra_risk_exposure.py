@@ -103,6 +103,8 @@ def generate_barra_risk_exposure():
         dates_to_process = available_dates[-30:]
         
         print(f"\n📅 处理 {len(dates_to_process)} 个日期...")
+        print(f"⚠️  注意: PCA和正交化每日重新计算（横截面处理）")
+        print(f"   在生产环境中，建议使用固定/滚动窗口估计结构以提高时间稳定性")
         
         results = {}
         factor_returns_history = []  # List to store factor returns DataFrames for covariance estimation
@@ -187,6 +189,10 @@ def generate_barra_risk_exposure():
                         normalized_bucket_factors[bucket_name] = bucket_df
                 
                 # Step 2: Reduce dimension within each bucket (PCA)
+                # NOTE: In practice, Barra models often use rolling/ fixed window to estimate PCA structure
+                # for stability. Here we compute daily, but ensure consistent factor taxonomy.
+                # For production use, consider using a fixed window (e.g., 60 days) to estimate
+                # PCA loadings once, then apply to all dates for consistent factor definitions.
                 style_factors_dict = {}
                 for bucket_name, bucket_data in normalized_bucket_factors.items():
                     try:
@@ -209,6 +215,9 @@ def generate_barra_risk_exposure():
                     continue
                 
                 # Step 3: Orthogonalize style factors
+                # NOTE: Similar to PCA, orthogonalization can be pre-computed using a rolling window
+                # for stability. Daily recomputation ensures cross-sectional orthogonality but
+                # may lead to time-varying factor definitions.
                 style_factors_ortho = model.orthogonalize_style_factors(style_factors_df)
                 
                 # Step 4: Compute portfolio exposures
@@ -349,9 +358,17 @@ def generate_barra_risk_exposure():
                             marginal_contributions = factor_cov_subset.values @ portfolio_exposure_vector
                             
                             # Risk contribution for each factor: RC_k = b_k × (Σ_f b)_k
+                            # Note: RC_k can be negative if exposure and marginal contribution have opposite signs
+                            # This indicates the factor is reducing portfolio risk (hedging effect)
+                            # However, the absolute value |RC_k| represents the magnitude of risk impact
                             for idx, factor_name in enumerate(common_factors):
                                 rc_k = portfolio_exposure_vector[idx] * marginal_contributions[idx]
                                 risk_contributions[factor_name] = float((rc_k / total_portfolio_variance) * 100)
+                                
+                                # Note: Negative risk contribution means:
+                                # - The factor exposure (b_k) and marginal contribution ((Σ_f b)_k) have opposite signs
+                                # - This factor is acting as a hedge, reducing portfolio variance
+                                # - The magnitude |RC_k| still represents the factor's impact on risk
                             
                             # Specific risk contribution
                             if portfolio_specific_variance > 0:
