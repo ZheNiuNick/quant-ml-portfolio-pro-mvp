@@ -83,14 +83,14 @@
         </div>
 
         <!-- 2. Rolling ICIR and t-stat -->
-        <div class="row">
+        <div class="row mt-3">
             <div class="col-md-6">
                 <div class="card diagnostic-card">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Rolling ICIR (60D)</h5>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">
+                        <p class="text-muted small mb-3">
                             <i class="fas fa-info-circle me-1"></i>
                             ICIR = mean(IC_60d) / std(IC_60d)
                         </p>
@@ -104,7 +104,7 @@
                         <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Rolling t-stat (60D)</h5>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">
+                        <p class="text-muted small mb-3">
                             <i class="fas fa-info-circle me-1"></i>
                             t-stat = mean(IC_60d) / std(IC_60d) × √N
                         </p>
@@ -287,13 +287,8 @@
                 return;
             }
             
-            // Filter to alpha factors (factors starting with "Alpha" or "CUSTOM")
-            const alphaFactors = data.factors.filter(f => 
-                f.startsWith('Alpha') || f.startsWith('CUSTOM') || f.includes('ALPHA')
-            );
-            
-            // Use alpha factors if available, otherwise use all factors
-            const factorsToUse = alphaFactors.length > 0 ? alphaFactors : data.factors;
+            // Use all factors (including Alpha, CUSTOM, and TALIB factors)
+            const factorsToUse = data.factors;
             
             selectEl.innerHTML = '<option value="">Select a factor...</option>';
             factorsToUse.forEach(factor => {
@@ -1048,39 +1043,18 @@
                         <div class="col-md-12">
                             <h6><i class="fas fa-book me-2"></i>1. What is Barra-Style Risk Exposure?</h6>
                             <p class="small mb-3">
-                                This analysis uses a <strong>Barra-style multi-factor risk model</strong> following industry-standard 
-                                principles to decompose portfolio risk into interpretable, independent sources. Unlike simple factor 
-                                analysis, this model transforms raw factors into orthogonal style factors that represent distinct 
-                                risk dimensions.
+                                This analysis uses a Barra-style multi-factor risk model following industry-standard principles to decompose portfolio risk into interpretable, independent sources. Unlike simple factor analysis, this model transforms raw factors into orthogonal style factors that represent distinct risk dimensions.
                             </p>
                             
                             <h6><i class="fas fa-cogs me-2"></i>2. Methodology: Step-by-Step Process</h6>
                             <ol class="small mb-3">
-                                <li><strong>Factor Classification:</strong> Groups 160+ raw factors into 7 economically meaningful 
-                                    style buckets (Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom). 
-                                    Alpha factors are excluded (they are signals, not risk factors).</li>
-                                <li><strong>Cross-Sectional Normalization:</strong> For each date, factors are winsorized (clipped 
-                                    at 1st/99th percentiles) and z-score normalized to ensure comparability across stocks.</li>
-                                <li><strong>Fixed PCA Structure (Rolling Window):</strong> Using a rolling window (60-252 days, 
-                                    default 126 days), Principal Component Analysis loadings are estimated once and kept fixed 
-                                    across all dates. Within each style bucket, the first principal component (PC1) loadings are 
-                                    computed from the reference window and applied to all subsequent dates. This ensures <strong>time-stable 
-                                    factor definitions</strong>—the same raw factors map to the same style factors across time, 
-                                    allowing meaningful time-series analysis and consistent risk attribution.</li>
-                                <li><strong>Fixed Orthogonalization Matrix:</strong> Using the same rolling window, the Gram-Schmidt 
-                                    orthogonalization matrix is estimated once and kept fixed. This ensures style factors are 
-                                    consistently orthogonalized across all dates, maintaining independence while preserving temporal 
-                                    stability. The orthogonalization order and transformation are fixed based on the reference window.</li>
-                                <li><strong>Factor Return Estimation:</strong> Daily factor returns are estimated via cross-sectional 
-                                    regression: <code>r_{i,t+1} = Σ_k (β_{i,k,t} × f_{k,t+1}) + ε_{i,t+1}</code>, where exposures (β) 
-                                    are from time t and stock returns (r) are from time t+1 (no look-ahead bias). The factor exposures 
-                                    β_{i,k,t} use the <strong>fixed PCA and orthogonalization structure</strong> estimated from the 
-                                    rolling window, ensuring consistency across time.</li>
-                                <li><strong>Factor Covariance Matrix:</strong> Time-series covariance of factor returns is estimated 
-                                    using EWMA (Exponentially Weighted Moving Average) with λ=0.94: <code>Σ_f = Cov(factor_returns)</code>.</li>
-                                <li><strong>Risk Decomposition:</strong> Portfolio variance is computed as: 
-                                    <code>σ²_portfolio = b^T Σ_f b + σ²_specific</code>, where <code>b</code> is the vector of 
-                                    portfolio factor exposures.</li>
+                                <li><strong>Factor Classification:</strong> Groups 160+ raw factors into 7 economically meaningful style buckets (Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom). Alpha factors are excluded (they are signals, not risk factors).</li>
+                                <li><strong>Cross-Sectional Normalization:</strong> For each date, factors are winsorized (clipped at 1st/99th percentiles) and z-score normalized to ensure comparability across stocks.</li>
+                                <li><strong>Fixed PCA Structure (Rolling Window):</strong> Using a rolling window (60-252 days, default 126 days), Principal Component Analysis loadings are estimated once and kept fixed across all dates. Within each style bucket, the first principal component (PC1) loadings are computed from the reference window and applied to all subsequent dates. This ensures time-stable factor definitions—the same raw factors map to the same style factors across time, allowing meaningful time-series analysis and consistent risk attribution.</li>
+                                <li><strong>Fixed Orthogonalization Matrix:</strong> Using the same rolling window, the Gram-Schmidt orthogonalization matrix is estimated once and kept fixed. This ensures style factors are consistently orthogonalized across all dates, maintaining independence while preserving temporal stability. The orthogonalization order and transformation are fixed based on the reference window.</li>
+                                <li><strong>Factor Return Estimation:</strong> Daily factor returns are estimated via cross-sectional regression: <code>r_{i,t+1} = Σ_k (β_{i,k,t} × f_{k,t+1}) + ε_{i,t+1}</code>, where exposures (β) are from time t and stock returns (r) are from time t+1 (no look-ahead bias). The factor exposures β_{i,k,t} use the fixed PCA and orthogonalization structure estimated from the rolling window, ensuring consistency across time.</li>
+                                <li><strong>Factor Covariance Matrix:</strong> Time-series covariance of factor returns is estimated using EWMA (Exponentially Weighted Moving Average) with λ=0.94: <code>Σ_f = Cov(factor_returns)</code>.</li>
+                                <li><strong>Risk Decomposition:</strong> Portfolio variance is computed as: <code>σ²_portfolio = b^T Σ_f b + σ²_specific</code>, where b is the vector of portfolio factor exposures.</li>
                             </ol>
                             
                             <h6><i class="fas fa-calculator me-2"></i>3. Key Formulas</h6>
