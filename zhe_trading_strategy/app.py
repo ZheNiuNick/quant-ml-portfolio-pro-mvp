@@ -1130,9 +1130,9 @@ def factor_clusters():
                     dominant_styles.append(dominant_style)
                 factor_stats["dominant_style"] = dominant_styles
         
-        # Initialize clusters with canonical Barra-style categories
+        # Initialize clusters with canonical Barra-style categories (SINGLE SOURCE OF TRUTH)
         from src.barra_style_mapper import BarraStyleMapper
-        canonical_styles = BarraStyleMapper.CANONICAL_STYLES
+        canonical_styles = BarraStyleMapper.CANONICAL_STYLES + ["Custom"]  # Custom is fallback only
         clusters = {style: [] for style in canonical_styles}
         
         # Group factors by dominant style
