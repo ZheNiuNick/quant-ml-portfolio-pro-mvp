@@ -65,9 +65,15 @@
         <!-- 1. Rolling IC Curve -->
         <div class="card diagnostic-card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Rolling IC (60D)</h5>
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Rolling IC (60D) - Single Factor Analysis</h5>
             </div>
             <div class="card-body">
+                <div class="mb-3">
+                    <label for="rolling-factor-select" class="form-label">Select Factor:</label>
+                    <select id="rolling-factor-select" class="form-select" onchange="loadRollingMetrics()">
+                        <option value="">Loading factors...</option>
+                    </select>
+                </div>
                 <p class="text-muted small mb-2">
                     <i class="fas fa-info-circle me-1"></i>
                     Rolling statistics begin once 60 trading days of data are available.
@@ -119,6 +125,13 @@
                     <select id="factor-select" class="form-select" onchange="loadLongShortPerformance()">
                         <option value="">Loading...</option>
                     </select>
+                </div>
+                <div class="alert alert-info small mb-3" role="alert">
+                    <strong>Definition:</strong><br>
+                    • <strong>Long Portfolio</strong> = Top quintile (20%) stocks with highest factor scores<br>
+                    • <strong>Short Portfolio</strong> = Bottom quintile (20%) stocks with lowest factor scores<br>
+                    • <strong>Long-Short Return</strong> = long_return - short_return (the difference, not cumulative subtraction)<br>
+                    • <strong>Note:</strong> If Short portfolio outperforms Long portfolio (Long-Short is negative), this indicates the factor is <strong>negatively predictive</strong>. In such cases, reverse the factor sign for trading.
                 </div>
                 <div id="long-short-chart" class="chart-container"></div>
                 <div id="long-short-table" class="mt-3"></div>
@@ -219,12 +232,13 @@
                 return;
             }
             
+            // First, load factor list for Rolling metrics selector
+            await loadRollingFactorList();
+            
             // Load all data in parallel (improve speed)
             // Use Promise.allSettled to ensure continuation even if some fail
+            // Note: Rolling metrics are loaded after factor selection
             const promises = [
-                loadRollingIC().catch(e => { console.error('Rolling IC failed:', e); return { error: e }; }),
-                loadRollingICIR().catch(e => { console.error('Rolling ICIR failed:', e); return { error: e }; }),
-                loadRollingTStat().catch(e => { console.error('Rolling t-stat failed:', e); return { error: e }; }),
                 loadFactorList().catch(e => { console.error('Factor list failed:', e); return { error: e }; }),
                 loadFactorClusters().catch(e => { console.error('Factor Clusters Analysis failed:', e); return { error: e }; }),
                 loadCorrelationMatrix().catch(e => { console.error('Correlation matrix failed:', e); return { error: e }; }),
@@ -255,31 +269,83 @@
         }
     }
 
-    // 1. Load Rolling IC
-    async function loadRollingIC() {
+    // Shared factor selector for Rolling metrics
+    let selectedRollingFactor = '';
+    
+    // Load factor list for Rolling metrics selector
+    async function loadRollingFactorList() {
         try {
-            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-ic` : '/api/factor-diagnostics/rolling-ic';
-            console.log('[Rolling IC] Requesting URL:', url);
-            console.log('[Rolling IC] No date filters applied - requesting full history');
+            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/factors` : '/api/factor-diagnostics/factors';
             const response = await fetch(url);
             const data = await response.json();
             
-            // Log debugging information
-            if (data._debug) {
-                console.log('[Rolling IC] Debug info:', {
-                    raw_ic_count: data._debug.raw_ic_count,
-                    non_null_ic_count: data._debug.non_null_ic_count,
-                    returned_count: data._debug.returned_count,
-                    date_min: data._debug.date_min,
-                    date_max: data._debug.date_max,
-                    rolling_window: data._debug.rolling_window,
-                    actual_dates_length: data.dates ? data.dates.length : 0
-                });
+            const selectEl = document.getElementById('rolling-factor-select');
+            if (!selectEl) return;
+            
+            if (data.error || !data.factors || data.factors.length === 0) {
+                selectEl.innerHTML = '<option value="">No factors available</option>';
+                return;
             }
+            
+            // Filter to alpha factors (factors starting with "Alpha" or "CUSTOM")
+            const alphaFactors = data.factors.filter(f => 
+                f.startsWith('Alpha') || f.startsWith('CUSTOM') || f.includes('ALPHA')
+            );
+            
+            // Use alpha factors if available, otherwise use all factors
+            const factorsToUse = alphaFactors.length > 0 ? alphaFactors : data.factors;
+            
+            selectEl.innerHTML = '<option value="">Select a factor...</option>';
+            factorsToUse.forEach(factor => {
+                const option = document.createElement('option');
+                option.value = factor;
+                option.textContent = factor;
+                selectEl.appendChild(option);
+            });
+            
+            // Set default to first alpha factor
+            if (factorsToUse.length > 0) {
+                selectedRollingFactor = factorsToUse[0];
+                selectEl.value = selectedRollingFactor;
+                loadRollingMetrics();
+            }
+        } catch (error) {
+            console.error('[Rolling Factor List] Failed to load:', error);
+        }
+    }
+    
+    // Load all rolling metrics (IC, ICIR, t-stat) for selected factor
+    function loadRollingMetrics() {
+        const selectEl = document.getElementById('rolling-factor-select');
+        if (!selectEl) return;
+        
+        selectedRollingFactor = selectEl.value;
+        if (!selectedRollingFactor) {
+            // Clear all charts
+            document.getElementById('rolling-ic-chart').innerHTML = '<p class="text-muted text-center py-5">Please select a factor</p>';
+            document.getElementById('rolling-icir-chart').innerHTML = '<p class="text-muted text-center py-5">Please select a factor</p>';
+            document.getElementById('rolling-tstat-chart').innerHTML = '<p class="text-muted text-center py-5">Please select a factor</p>';
+            return;
+        }
+        
+        loadRollingIC();
+        loadRollingICIR();
+        loadRollingTStat();
+    }
+    
+    // 1. Load Rolling IC
+    async function loadRollingIC() {
+        if (!selectedRollingFactor) return;
+        
+        try {
+            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-ic?factor=${encodeURIComponent(selectedRollingFactor)}` : `/api/factor-diagnostics/rolling-ic?factor=${encodeURIComponent(selectedRollingFactor)}`;
+            console.log('[Rolling IC] Requesting URL:', url);
+            const response = await fetch(url);
+            const data = await response.json();
             
             if (data.error || !data.dates || data.dates.length === 0) {
                 console.warn('Rolling IC data is empty:', data.error || 'No data');
-                document.getElementById('rolling-ic-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
+                document.getElementById('rolling-ic-chart').innerHTML = `<p class="text-muted text-center py-5">${data.error || 'No data available'}</p>`;
                 return;
             }
             
@@ -288,7 +354,7 @@
             const validIcUpper = [];
             const validIcLower = [];
             const validDates = [];
-            data.ic_mean.forEach((value, index) => {
+            data.rolling_ic.forEach((value, index) => {
                 if (value !== null && value !== undefined && !isNaN(value)) {
                     validIcMean.push(value);
                     validIcUpper.push(data.ic_upper[index]);
@@ -315,7 +381,7 @@
                 y: validIcMean,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Mean IC',
+                name: `Rolling IC (${data.factor || selectedRollingFactor})`,
                 line: { color: '#2E86AB', width: 2 }
             };
             
@@ -346,7 +412,7 @@
             const chartEl = document.getElementById('rolling-ic-chart');
             if (chartEl) {
                 Plotly.newPlot('rolling-ic-chart', [trace_lower, trace_upper, trace], {
-                    title: 'Rolling IC (60D)',
+                    title: `Rolling IC (60D) - ${data.factor || selectedRollingFactor}`,
                     xaxis: { title: 'Date' },
                     yaxis: { title: 'IC Value' },
                     hovermode: 'x unified',
@@ -362,42 +428,29 @@
             if (chartEl) {
                 chartEl.innerHTML = '<p class="text-danger text-center py-5">Failed to load: ' + error.message + '</p>';
             }
-            // Don't rethrow, let other charts continue loading
         }
     }
 
     // 2. Load Rolling ICIR
     async function loadRollingICIR() {
+        if (!selectedRollingFactor) return;
+        
         try {
-            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-icir` : '/api/factor-diagnostics/rolling-icir';
+            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-icir?factor=${encodeURIComponent(selectedRollingFactor)}` : `/api/factor-diagnostics/rolling-icir?factor=${encodeURIComponent(selectedRollingFactor)}`;
             console.log('[Rolling ICIR] Requesting URL:', url);
-            console.log('[Rolling ICIR] No date filters applied - requesting full history');
             const response = await fetch(url);
             const data = await response.json();
             
-            // Log debugging information
-            if (data._debug) {
-                console.log('[Rolling ICIR] Debug info:', {
-                    raw_ic_count: data._debug.raw_ic_count,
-                    non_null_ic_count: data._debug.non_null_ic_count,
-                    returned_count: data._debug.returned_count,
-                    date_min: data._debug.date_min,
-                    date_max: data._debug.date_max,
-                    rolling_window: data._debug.rolling_window,
-                    actual_dates_length: data.dates ? data.dates.length : 0
-                });
-            }
-            
             if (data.error || !data.dates || data.dates.length === 0) {
                 console.warn('Rolling ICIR data is empty:', data.error || 'No data');
-                document.getElementById('rolling-icir-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
+                document.getElementById('rolling-icir-chart').innerHTML = `<p class="text-muted text-center py-5">${data.error || 'No data available'}</p>`;
                 return;
             }
             
             // Filter out NaN values for plotting
             const validData = [];
             const validDates = [];
-            data.icir.forEach((value, index) => {
+            data.rolling_icir.forEach((value, index) => {
                 if (value !== null && value !== undefined && !isNaN(value)) {
                     validData.push(value);
                     validDates.push(data.dates[index]);
@@ -423,14 +476,14 @@
                 y: validData,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'ICIR',
+                name: `Rolling ICIR (${data.factor || selectedRollingFactor})`,
                 line: { color: '#17a2b8', width: 2 }
             };
             
             const chartEl = document.getElementById('rolling-icir-chart');
             if (chartEl) {
                 Plotly.newPlot('rolling-icir-chart', [trace], {
-                    title: 'Rolling ICIR (60D)',
+                    title: `Rolling ICIR (60D) - ${data.factor || selectedRollingFactor}`,
                     xaxis: { title: 'Date' },
                     yaxis: { title: 'ICIR Value' },
                     hovermode: 'x unified',
@@ -448,36 +501,24 @@
 
     // 3. Load Rolling t-stat
     async function loadRollingTStat() {
+        if (!selectedRollingFactor) return;
+        
         try {
-            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-tstat` : '/api/factor-diagnostics/rolling-tstat';
+            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-tstat?factor=${encodeURIComponent(selectedRollingFactor)}` : `/api/factor-diagnostics/rolling-tstat?factor=${encodeURIComponent(selectedRollingFactor)}`;
             console.log('[Rolling t-stat] Requesting URL:', url);
-            console.log('[Rolling t-stat] No date filters applied - requesting full history');
             const response = await fetch(url);
             const data = await response.json();
             
-            // Log debugging information
-            if (data._debug) {
-                console.log('[Rolling t-stat] Debug info:', {
-                    raw_ic_count: data._debug.raw_ic_count,
-                    non_null_ic_count: data._debug.non_null_ic_count,
-                    returned_count: data._debug.returned_count,
-                    date_min: data._debug.date_min,
-                    date_max: data._debug.date_max,
-                    rolling_window: data._debug.rolling_window,
-                    actual_dates_length: data.dates ? data.dates.length : 0
-                });
-            }
-            
             if (data.error || !data.dates || data.dates.length === 0) {
                 console.warn('Rolling t-stat data is empty:', data.error || 'No data');
-                document.getElementById('rolling-tstat-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
+                document.getElementById('rolling-tstat-chart').innerHTML = `<p class="text-muted text-center py-5">${data.error || 'No data available'}</p>`;
                 return;
             }
             
             // Filter out null/NaN values for plotting
             const validData = [];
             const validDates = [];
-            data.tstat.forEach((value, index) => {
+            data.rolling_tstat.forEach((value, index) => {
                 if (value !== null && value !== undefined && !isNaN(value)) {
                     validData.push(value);
                     validDates.push(data.dates[index]);
@@ -503,7 +544,7 @@
                 y: validData,
                 type: 'scatter',
                 mode: 'lines',
-                name: 't-stat',
+                name: `Rolling t-stat (${data.factor || selectedRollingFactor})`,
                 line: { color: '#ffc107', width: 2 }
             };
             
@@ -527,7 +568,7 @@
             }
             
             Plotly.newPlot('rolling-tstat-chart', [trace], {
-                title: 'Rolling t-stat (60D)',
+                title: `Rolling t-stat (60D) - ${data.factor || selectedRollingFactor}`,
                 xaxis: { title: 'Date' },
                 yaxis: { title: 't-stat Value' },
                 hovermode: 'x unified',
@@ -588,30 +629,35 @@
                 return;
             }
         
+        // Use cumulative returns for display
+        const cumLong = data.cum_long || [];
+        const cumShort = data.cum_short || [];
+        const cumLs = data.cum_ls || [];
+        
         const traces = [
             {
                 x: data.dates,
-                y: data.long_returns,
+                y: cumLong,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Long Portfolio',
-                line: { color: '#28a745', width: 2 }
+                name: 'Long (Top 20%)',
+                line: { color: '#28a745', width: 2, dash: 'dot' }
             },
             {
                 x: data.dates,
-                y: data.short_returns,
+                y: cumShort,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Short Portfolio',
-                line: { color: '#dc3545', width: 2 }
+                name: 'Short (Bottom 20%)',
+                line: { color: '#dc3545', width: 2, dash: 'dot' }
             },
             {
                 x: data.dates,
-                y: data.long_short_returns,
+                y: cumLs,
                 type: 'scatter',
                 mode: 'lines',
-                name: 'Long-Short',
-                line: { color: '#007bff', width: 2 }
+                name: 'Long-Short (Long - Short)',
+                line: { color: '#007bff', width: 3 }
             }
         ];
         
@@ -620,41 +666,54 @@
             xaxis: { title: 'Date' },
             yaxis: { title: 'Cumulative Return' },
             hovermode: 'x unified',
-            template: 'plotly_white'
+            template: 'plotly_white',
+            legend: { x: 0, y: 1 }
         });
         
-        // Show statistics table
+        // Show statistics table - emphasize Long-Short metrics
+        const lsAnnualReturn = data.stats.long_short_annual_return || 0;
+        const lsSharpe = data.stats.long_short_sharpe || 0;
+        const lsMaxDd = data.stats.long_short_max_dd || 0;
+        
+        // Determine if factor is negatively predictive
+        const isNegativePredictive = lsAnnualReturn < 0;
+        const factorInterpretation = isNegativePredictive 
+            ? '<div class="alert alert-warning mt-2 mb-0"><small><strong>⚠️ Negative Predictive Factor:</strong> Short portfolio outperforms Long portfolio. Consider reversing the factor sign for trading.</small></div>'
+            : '<div class="alert alert-success mt-2 mb-0"><small><strong>✅ Positive Predictive Factor:</strong> Factor shows positive predictive power.</small></div>';
+        
         const table = `
-            <table class="table table-striped">
+            <h6 class="mb-2">Performance Metrics</h6>
+            <table class="table table-striped table-sm">
                 <thead>
                     <tr>
                         <th>Metric</th>
-                        <th>Long</th>
-                        <th>Short</th>
-                        <th>Long-Short</th>
+                        <th>Long-Short (Primary)</th>
+                        <th class="text-muted">Long (Reference)</th>
+                        <th class="text-muted">Short (Reference)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Annual Return</td>
-                        <td>${(data.stats.long_annual_return * 100).toFixed(2)}%</td>
-                        <td>${(data.stats.short_annual_return * 100).toFixed(2)}%</td>
-                        <td>${(data.stats.long_short_annual_return * 100).toFixed(2)}%</td>
+                        <td><strong>Annual Return</strong></td>
+                        <td><strong>${(lsAnnualReturn * 100).toFixed(2)}%</strong></td>
+                        <td class="text-muted">${(data.stats.long_annual_return * 100).toFixed(2)}%</td>
+                        <td class="text-muted">${(data.stats.short_annual_return * 100).toFixed(2)}%</td>
                     </tr>
                     <tr>
-                        <td>Sharpe Ratio</td>
-                        <td>${data.stats.long_sharpe.toFixed(2)}</td>
-                        <td>${data.stats.short_sharpe.toFixed(2)}</td>
-                        <td>${data.stats.long_short_sharpe.toFixed(2)}</td>
+                        <td><strong>Sharpe Ratio</strong></td>
+                        <td><strong>${lsSharpe.toFixed(2)}</strong></td>
+                        <td class="text-muted">${data.stats.long_sharpe.toFixed(2)}</td>
+                        <td class="text-muted">${data.stats.short_sharpe.toFixed(2)}</td>
                     </tr>
                     <tr>
-                        <td>Max Drawdown</td>
-                        <td>${(data.stats.long_max_dd * 100).toFixed(2)}%</td>
-                        <td>${(data.stats.short_max_dd * 100).toFixed(2)}%</td>
-                        <td>${(data.stats.long_short_max_dd * 100).toFixed(2)}%</td>
+                        <td><strong>Max Drawdown</strong></td>
+                        <td><strong>${(lsMaxDd * 100).toFixed(2)}%</strong></td>
+                        <td class="text-muted">${(data.stats.long_max_dd * 100).toFixed(2)}%</td>
+                        <td class="text-muted">${(data.stats.short_max_dd * 100).toFixed(2)}%</td>
                     </tr>
                 </tbody>
             </table>
+            ${factorInterpretation}
         `;
         document.getElementById('long-short-table').innerHTML = table;
         } catch (error) {

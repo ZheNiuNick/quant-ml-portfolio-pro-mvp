@@ -118,13 +118,21 @@ def generate_long_short_performance():
                     if len(aligned) < 20:
                         continue
                     
+                    # 按因子值排序（升序）
                     aligned = aligned.sort_values(by=aligned.columns[0])
                     n = len(aligned)
-                    long_portfolio = aligned.iloc[-n//5:]
-                    short_portfolio = aligned.iloc[:n//5]
                     
-                    long_ret = long_portfolio.iloc[:, 1].mean()
-                    short_ret = short_portfolio.iloc[:, 1].mean()
+                    # Top quintile (20%) -> Long portfolio
+                    # Bottom quintile (20%) -> Short portfolio
+                    long_portfolio = aligned.iloc[-n//5:]  # Top 20%
+                    short_portfolio = aligned.iloc[:n//5]  # Bottom 20%
+                    
+                    # 计算每日收益：mean(returns of stocks in quantile)
+                    long_ret = long_portfolio.iloc[:, 1].mean()  # Long = mean(returns of top quantile)
+                    short_ret = short_portfolio.iloc[:, 1].mean()  # Short = mean(returns of bottom quantile)
+                    
+                    # Long-Short = long_return - short_return
+                    # ⚠️ short_ret 是 bottom quantile 的真实收益，不要取负号
                     ls_ret = long_ret - short_ret
                     
                     dates.append(date.strftime("%Y-%m-%d"))
@@ -134,8 +142,10 @@ def generate_long_short_performance():
                 
                 if len(dates) > 0:
                     # 计算累计收益
+                    # Cumulative = (1 + daily_return).cumprod()
                     long_cum = (1 + pd.Series(long_returns)).cumprod().tolist()
                     short_cum = (1 + pd.Series(short_returns)).cumprod().tolist()
+                    # Long-Short cumulative: cumprod of (1 + ls_return)
                     ls_cum = (1 + pd.Series(long_short_returns)).cumprod().tolist()
                     
                     # 计算统计指标
@@ -153,6 +163,11 @@ def generate_long_short_performance():
                     
                     results[factor_name] = {
                         "dates": dates,
+                        # Daily returns (for calculation)
+                        "long_returns_daily": long_returns,
+                        "short_returns_daily": short_returns,
+                        "ls_returns_daily": long_short_returns,
+                        # Cumulative returns (for display)
                         "long_returns": long_cum,
                         "short_returns": short_cum,
                         "long_short_returns": ls_cum,

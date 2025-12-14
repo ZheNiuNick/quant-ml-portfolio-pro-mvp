@@ -623,7 +623,22 @@ def factors_by_date():
 
 @app.route('/api/factor-diagnostics/rolling-ic')
 def rolling_ic():
-    """Rolling IC (60 trading-day window)"""
+    """Rolling IC (60 trading-day window) - Single factor analysis
+    
+    Query params:
+        factor: factor name (required)
+    """
+    factor_name = request.args.get('factor')
+    
+    if not factor_name:
+        return jsonify({
+            "error": "请提供因子名称 (factor parameter required)",
+            "dates": [],
+            "rolling_ic": [],
+            "ic_upper": [],
+            "ic_lower": []
+        }), 200
+    
     try:
         # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
         ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
@@ -632,76 +647,63 @@ def rolling_ic():
             return jsonify({
                 "error": f"IC数据不存在: {ic_store_path}，请先运行因子IC计算",
                 "dates": [],
-                "ic_mean": [],
+                "rolling_ic": [],
                 "ic_upper": [],
                 "ic_lower": []
             }), 200
         
         ic_data = pd.read_parquet(ic_store_path)
-        print(f"[DEBUG Rolling IC] Loaded {len(ic_data)} records from {ic_store_path}")
         
         if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
             ic_data["date"] = pd.to_datetime(ic_data["date"])
         
-        ic_data = ic_data.sort_values("date")
-        print(f"[DEBUG Rolling IC] Date range in raw data: {ic_data['date'].min()} to {ic_data['date'].max()}")
-        print(f"[DEBUG Rolling IC] Unique dates in raw data: {ic_data['date'].nunique()}")
+        # 筛选特定因子
+        factor_ic = ic_data[ic_data["factor"] == factor_name].copy()
         
-        # 按日期分组，计算每日平均IC
-        daily_ic = ic_data.groupby("date")["ic"].agg(['mean', 'std', 'count']).reset_index()
-        daily_ic = daily_ic.sort_values("date").reset_index(drop=True)
-        print(f"[DEBUG Rolling IC] After groupby: {len(daily_ic)} daily records, date range: {daily_ic['date'].min()} to {daily_ic['date'].max()}")
+        if len(factor_ic) == 0:
+            return jsonify({
+                "error": f"因子 {factor_name} 的IC数据不存在",
+                "dates": [],
+                "rolling_ic": [],
+                "ic_upper": [],
+                "ic_lower": []
+            }), 200
+        
+        # 按日期排序
+        factor_ic = factor_ic.sort_values("date").reset_index(drop=True)
         
         # 使用60个交易日滚动窗口计算Rolling IC
-        # Rolling IC = rolling mean of daily IC over 60 trading days
         ROLLING_WINDOW = 60  # 60 trading days
         
         # 计算滚动均值（60天窗口）
-        daily_ic["ic_mean"] = daily_ic["mean"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).mean()
+        rolling_ic_mean = factor_ic["ic"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).mean()
         
         # 计算滚动标准差（用于置信区间）
-        rolling_std = daily_ic["mean"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).std()
-        rolling_count = daily_ic["count"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).mean()
+        rolling_std = factor_ic["ic"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).std()
         
-        # 计算上下界（均值 ± 1.96 * 标准误）
-        # 标准误 = std / sqrt(n)
-        daily_ic["ic_upper"] = daily_ic["ic_mean"] + 1.96 * rolling_std / np.sqrt(rolling_count)
-        daily_ic["ic_lower"] = daily_ic["ic_mean"] - 1.96 * rolling_std / np.sqrt(rolling_count)
+        # 计算上下界（均值 ± 1.96 * 标准差）
+        ic_upper = rolling_ic_mean + 1.96 * rolling_std
+        ic_lower = rolling_ic_mean - 1.96 * rolling_std
         
         # 将NaN转换为None（在JSON中会序列化为null，前端可以处理）
-        ic_mean_list = [None if pd.isna(x) else float(x) for x in daily_ic["ic_mean"]]
-        ic_upper_list = [None if pd.isna(x) else float(x) for x in daily_ic["ic_upper"]]
-        ic_lower_list = [None if pd.isna(x) else float(x) for x in daily_ic["ic_lower"]]
-        
-        # Debugging fields (convert int64 to int for JSON serialization)
-        raw_ic_count = int(len(daily_ic))
-        non_null_ic_count = int(daily_ic["mean"].notna().sum())
-        returned_count = int(len(ic_mean_list))
-        date_min = daily_ic["date"].min().strftime("%Y-%m-%d") if len(daily_ic) > 0 else None
-        date_max = daily_ic["date"].max().strftime("%Y-%m-%d") if len(daily_ic) > 0 else None
+        rolling_ic_list = [None if pd.isna(x) else float(x) for x in rolling_ic_mean]
+        ic_upper_list = [None if pd.isna(x) else float(x) for x in ic_upper]
+        ic_lower_list = [None if pd.isna(x) else float(x) for x in ic_lower]
         
         return jsonify({
             "error": None,
-            "dates": [d.strftime("%Y-%m-%d") for d in daily_ic["date"]],
-            "ic_mean": ic_mean_list,
+            "dates": [d.strftime("%Y-%m-%d") for d in factor_ic["date"]],
+            "rolling_ic": rolling_ic_list,
             "ic_upper": ic_upper_list,
             "ic_lower": ic_lower_list,
-            # Debugging fields (temporary)
-            "_debug": {
-                "raw_ic_count": raw_ic_count,
-                "non_null_ic_count": non_null_ic_count,
-                "returned_count": returned_count,
-                "date_min": date_min,
-                "date_max": date_max,
-                "rolling_window": int(ROLLING_WINDOW)
-            }
+            "factor": factor_name
         })
     except Exception as e:
         import traceback
         return jsonify({
             "error": f"计算Rolling IC失败: {str(e)}",
             "dates": [],
-            "ic_mean": [],
+            "rolling_ic": [],
             "ic_upper": [],
             "ic_lower": [],
             "traceback": traceback.format_exc() if IBKR_CONFIG.get('debug', False) else None
@@ -710,10 +712,22 @@ def rolling_ic():
 
 @app.route('/api/factor-diagnostics/rolling-icir')
 def rolling_icir():
-    """Rolling ICIR (60 trading-day window)
+    """Rolling ICIR (60 trading-day window) - Single factor analysis
     
     ICIR = mean(IC_60d) / std(IC_60d)
+    
+    Query params:
+        factor: factor name (required)
     """
+    factor_name = request.args.get('factor')
+    
+    if not factor_name:
+        return jsonify({
+            "error": "请提供因子名称 (factor parameter required)",
+            "dates": [],
+            "rolling_icir": []
+        }), 200
+    
     try:
         # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
         ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
@@ -722,78 +736,76 @@ def rolling_icir():
             return jsonify({
                 "error": "IC数据不存在",
                 "dates": [],
-                "icir": []
+                "rolling_icir": []
             }), 200
         
         ic_data = pd.read_parquet(ic_store_path)
-        print(f"[DEBUG Rolling ICIR] Loaded {len(ic_data)} records from {ic_store_path}")
-        
         if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
             ic_data["date"] = pd.to_datetime(ic_data["date"])
         
-        ic_data = ic_data.sort_values("date")
-        print(f"[DEBUG Rolling ICIR] Date range in raw data: {ic_data['date'].min()} to {ic_data['date'].max()}")
-        print(f"[DEBUG Rolling ICIR] Unique dates in raw data: {ic_data['date'].nunique()}")
+        # 筛选特定因子
+        factor_ic = ic_data[ic_data["factor"] == factor_name].copy()
         
-        # 按日期分组，计算每日平均IC
-        daily_stats = ic_data.groupby("date")["ic"].agg(['mean', 'std', 'count']).reset_index()
-        daily_stats = daily_stats.sort_values("date").reset_index(drop=True)
-        print(f"[DEBUG Rolling ICIR] After groupby: {len(daily_stats)} daily records, date range: {daily_stats['date'].min()} to {daily_stats['date'].max()}")
+        if len(factor_ic) == 0:
+            return jsonify({
+                "error": f"因子 {factor_name} 的IC数据不存在",
+                "dates": [],
+                "rolling_icir": []
+            }), 200
+        
+        # 按日期排序
+        factor_ic = factor_ic.sort_values("date").reset_index(drop=True)
         
         # 使用60个交易日滚动窗口计算Rolling ICIR
-        # ICIR = mean(IC_60d) / std(IC_60d)
         ROLLING_WINDOW = 60  # 60 trading days
         
         # 计算60天滚动均值和标准差
-        rolling_mean = daily_stats["mean"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).mean()
-        rolling_std = daily_stats["mean"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).std()
+        rolling_mean = factor_ic["ic"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).mean()
+        rolling_std = factor_ic["ic"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).std()
         
         # 计算ICIR: ICIR = mean(IC_60d) / std(IC_60d)
-        daily_stats["icir"] = rolling_mean / rolling_std
+        rolling_icir = rolling_mean / rolling_std
         # 将NaN转换为None（当std=0或数据不足60天时）
-        daily_stats["icir"] = daily_stats["icir"].where(pd.notna(daily_stats["icir"]), None)
+        rolling_icir = rolling_icir.where(pd.notna(rolling_icir), None)
         
         # 转换为列表，None会保持为None（JSON序列化为null）
-        icir_list = [None if pd.isna(x) else float(x) if x is not None else None for x in daily_stats["icir"]]
-        
-        # Debugging fields (convert int64 to int for JSON serialization)
-        raw_ic_count = int(len(daily_stats))
-        non_null_ic_count = int(daily_stats["mean"].notna().sum())
-        returned_count = int(len(icir_list))
-        date_min = daily_stats["date"].min().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
-        date_max = daily_stats["date"].max().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
+        icir_list = [None if pd.isna(x) else float(x) if x is not None else None for x in rolling_icir]
         
         return jsonify({
             "error": None,
-            "dates": [d.strftime("%Y-%m-%d") for d in daily_stats["date"]],
-            "icir": icir_list,
-            # Debugging fields (temporary)
-            "_debug": {
-                "raw_ic_count": raw_ic_count,
-                "non_null_ic_count": non_null_ic_count,
-                "returned_count": returned_count,
-                "date_min": date_min,
-                "date_max": date_max,
-                "rolling_window": int(ROLLING_WINDOW)
-            }
+            "dates": [d.strftime("%Y-%m-%d") for d in factor_ic["date"]],
+            "rolling_icir": icir_list,
+            "factor": factor_name
         })
     except Exception as e:
         import traceback
         return jsonify({
             "error": f"计算Rolling ICIR失败: {str(e)}",
             "dates": [],
-            "icir": [],
+            "rolling_icir": [],
             "traceback": traceback.format_exc() if IBKR_CONFIG.get('debug', False) else None
         }), 200
 
 
 @app.route('/api/factor-diagnostics/rolling-tstat')
 def rolling_tstat():
-    """Rolling t-stat (60 trading-day window)
+    """Rolling t-stat (60 trading-day window) - Single factor analysis
     
     t-stat = mean(IC_60d) / std(IC_60d) * sqrt(N)
-    where N = number of IC observations in the 60-day window
+    where N = number of IC observations in the 60-day window (N = 60)
+    
+    Query params:
+        factor: factor name (required)
     """
+    factor_name = request.args.get('factor')
+    
+    if not factor_name:
+        return jsonify({
+            "error": "请提供因子名称 (factor parameter required)",
+            "dates": [],
+            "rolling_tstat": []
+        }), 200
+    
     try:
         # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
         ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
@@ -802,73 +814,61 @@ def rolling_tstat():
             return jsonify({
                 "error": "IC数据不存在",
                 "dates": [],
-                "tstat": []
+                "rolling_tstat": []
             }), 200
         
         ic_data = pd.read_parquet(ic_store_path)
-        print(f"[DEBUG Rolling t-stat] Loaded {len(ic_data)} records from {ic_store_path}")
-        
         if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
             ic_data["date"] = pd.to_datetime(ic_data["date"])
         
         ic_data = ic_data.sort_values("date")
-        print(f"[DEBUG Rolling t-stat] Date range in raw data: {ic_data['date'].min()} to {ic_data['date'].max()}")
-        print(f"[DEBUG Rolling t-stat] Unique dates in raw data: {ic_data['date'].nunique()}")
         
-        # 按日期分组，计算每日平均IC
-        daily_stats = ic_data.groupby("date")["ic"].agg(['mean', 'std', 'count']).reset_index()
-        daily_stats = daily_stats.sort_values("date").reset_index(drop=True)
-        print(f"[DEBUG Rolling t-stat] After groupby: {len(daily_stats)} daily records, date range: {daily_stats['date'].min()} to {daily_stats['date'].max()}")
+        # 筛选特定因子
+        factor_ic = ic_data[ic_data["factor"] == factor_name].copy()
+        
+        if len(factor_ic) == 0:
+            return jsonify({
+                "error": f"因子 {factor_name} 的IC数据不存在",
+                "dates": [],
+                "rolling_tstat": []
+            }), 200
+        
+        # 按日期排序
+        factor_ic = factor_ic.sort_values("date").reset_index(drop=True)
         
         # 使用60个交易日滚动窗口计算Rolling t-stat
         # t-stat = mean(IC_60d) / std(IC_60d) * sqrt(N)
-        # where N = number of IC observations in the 60-day window
+        # where N = number of IC observations in the 60-day window (N = 60)
         ROLLING_WINDOW = 60  # 60 trading days
         
         # 计算60天滚动均值和标准差
-        rolling_mean = daily_stats["mean"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).mean()
-        rolling_std = daily_stats["mean"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).std()
+        rolling_mean = factor_ic["ic"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).mean()
+        rolling_std = factor_ic["ic"].rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).std()
         
-        # 计算60天窗口内的有效观察数（非NaN的数量）
-        # 对于每个日期，计算过去60天的有效观察数
-        valid_count = daily_stats["mean"].notna().rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).sum()
+        # 计算60天窗口内的有效观察数（对于rolling window，N = 60）
+        valid_count = factor_ic["ic"].notna().rolling(window=ROLLING_WINDOW, min_periods=ROLLING_WINDOW).sum()
         
         # 计算t-stat: t = mean / std * sqrt(N)
         # 只有当std > 0且有效观察数 >= 60时才计算，否则为NaN
-        daily_stats["tstat"] = (rolling_mean / rolling_std) * np.sqrt(valid_count)
+        rolling_tstat = (rolling_mean / rolling_std) * np.sqrt(valid_count)
         # 将NaN转换为None（当std=0或数据不足60天时）
-        daily_stats["tstat"] = daily_stats["tstat"].where(pd.notna(daily_stats["tstat"]), None)
+        rolling_tstat = rolling_tstat.where(pd.notna(rolling_tstat), None)
         
         # 转换为列表，None会保持为None（JSON序列化为null）
-        tstat_list = [None if pd.isna(x) else float(x) if x is not None else None for x in daily_stats["tstat"]]
-        
-        # Debugging fields (convert int64 to int for JSON serialization)
-        raw_ic_count = int(len(daily_stats))
-        non_null_ic_count = int(daily_stats["mean"].notna().sum())
-        returned_count = int(len(tstat_list))
-        date_min = daily_stats["date"].min().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
-        date_max = daily_stats["date"].max().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
+        tstat_list = [None if pd.isna(x) else float(x) if x is not None else None for x in rolling_tstat]
         
         return jsonify({
             "error": None,
-            "dates": [d.strftime("%Y-%m-%d") for d in daily_stats["date"]],
-            "tstat": tstat_list,
-            # Debugging fields (temporary)
-            "_debug": {
-                "raw_ic_count": raw_ic_count,
-                "non_null_ic_count": non_null_ic_count,
-                "returned_count": returned_count,
-                "date_min": date_min,
-                "date_max": date_max,
-                "rolling_window": int(ROLLING_WINDOW)
-            }
+            "dates": [d.strftime("%Y-%m-%d") for d in factor_ic["date"]],
+            "rolling_tstat": tstat_list,
+            "factor": factor_name
         })
     except Exception as e:
         import traceback
         return jsonify({
             "error": f"计算Rolling t-stat失败: {str(e)}",
             "dates": [],
-            "tstat": [],
+            "rolling_tstat": [],
             "traceback": traceback.format_exc() if IBKR_CONFIG.get('debug', False) else None
         }), 200
 
@@ -959,12 +959,50 @@ def long_short_performance():
         
         result = data[factor_name]
         
-        # 转换 stats 结构：从嵌套结构转换为扁平结构
-        # 预计算格式: {"long": {...}, "short": {...}, "long_short": {...}}
-        # 前端期望: {"long_annual_return": ..., "short_annual_return": ..., ...}
+        # 预计算文件现在同时包含daily和cumulative returns
+        dates = result.get("dates", [])
+        
+        # 优先使用预计算的daily returns（如果存在）
+        if "long_returns_daily" in result:
+            long_returns_daily = result.get("long_returns_daily", [])
+            short_returns_daily = result.get("short_returns_daily", [])
+            ls_returns_daily = result.get("ls_returns_daily", [])
+        else:
+            # Fallback: 从cumulative计算daily returns
+            long_cum = result.get("long_returns", [])
+            short_cum = result.get("short_returns", [])
+            ls_cum = result.get("long_short_returns", [])
+            
+            long_returns_daily = [0.0] if len(long_cum) > 0 else []
+            short_returns_daily = [0.0] if len(short_cum) > 0 else []
+            ls_returns_daily = [0.0] if len(ls_cum) > 0 else []
+            
+            for i in range(1, len(dates)):
+                if i < len(long_cum) and long_cum[i-1] > 0:
+                    long_returns_daily.append((long_cum[i] / long_cum[i-1]) - 1.0)
+                else:
+                    long_returns_daily.append(0.0)
+                
+                if i < len(short_cum) and short_cum[i-1] > 0:
+                    short_returns_daily.append((short_cum[i] / short_cum[i-1]) - 1.0)
+                else:
+                    short_returns_daily.append(0.0)
+                
+                if i < len(ls_cum) and ls_cum[i-1] > 0:
+                    ls_returns_daily.append((ls_cum[i] / ls_cum[i-1]) - 1.0)
+                else:
+                    ls_returns_daily.append(0.0)
+        
+        # Cumulative returns
+        long_cum = result.get("long_returns", [])
+        short_cum = result.get("short_returns", [])
+        ls_cum = result.get("long_short_returns", [])
+        
+        # 转换 stats 结构：强调Long-Short的指标
         stats_flat = {}
         if "stats" in result:
             stats = result["stats"]
+            # 保留Long和Short用于参考，但强调Long-Short
             if "long" in stats:
                 stats_flat["long_annual_return"] = stats["long"].get("annual_return", 0.0)
                 stats_flat["long_sharpe"] = stats["long"].get("sharpe", 0.0)
@@ -974,16 +1012,20 @@ def long_short_performance():
                 stats_flat["short_sharpe"] = stats["short"].get("sharpe", 0.0)
                 stats_flat["short_max_dd"] = stats["short"].get("max_dd", 0.0)
             if "long_short" in stats:
+                # 强调Long-Short指标
                 stats_flat["long_short_annual_return"] = stats["long_short"].get("annual_return", 0.0)
                 stats_flat["long_short_sharpe"] = stats["long_short"].get("sharpe", 0.0)
                 stats_flat["long_short_max_dd"] = stats["long_short"].get("max_dd", 0.0)
         
         return jsonify({
             "error": None,
-            "dates": result["dates"],
-            "long_returns": result["long_returns"],
-            "short_returns": result["short_returns"],
-            "long_short_returns": result["long_short_returns"],
+            "dates": dates,
+            "long_return": long_returns_daily,  # Daily returns
+            "short_return": short_returns_daily,  # Daily returns
+            "ls_return": ls_returns_daily,  # Daily returns (long - short)
+            "cum_long": long_cum,  # Cumulative returns
+            "cum_short": short_cum,  # Cumulative returns
+            "cum_ls": ls_cum,  # Cumulative returns (long - short)
             "stats": stats_flat
         })
     except Exception as e:
