@@ -67,3 +67,4 @@ zhe_trading_strategy/site_libs/
 !zhe_trading_strategy/CNAME
 !zhe_trading_strategy/static/
 !zhe_trading_strategy/templates/
+!data/factors/factor_style_exposure.parquet
