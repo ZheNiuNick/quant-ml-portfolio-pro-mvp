@@ -638,14 +638,19 @@ def rolling_ic():
             }), 200
         
         ic_data = pd.read_parquet(ic_store_path)
+        print(f"[DEBUG Rolling IC] Loaded {len(ic_data)} records from {ic_store_path}")
+        
         if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
             ic_data["date"] = pd.to_datetime(ic_data["date"])
         
         ic_data = ic_data.sort_values("date")
+        print(f"[DEBUG Rolling IC] Date range in raw data: {ic_data['date'].min()} to {ic_data['date'].max()}")
+        print(f"[DEBUG Rolling IC] Unique dates in raw data: {ic_data['date'].nunique()}")
         
         # 按日期分组，计算每日平均IC
         daily_ic = ic_data.groupby("date")["ic"].agg(['mean', 'std', 'count']).reset_index()
         daily_ic = daily_ic.sort_values("date").reset_index(drop=True)
+        print(f"[DEBUG Rolling IC] After groupby: {len(daily_ic)} daily records, date range: {daily_ic['date'].min()} to {daily_ic['date'].max()}")
         
         # 使用60个交易日滚动窗口计算Rolling IC
         # Rolling IC = rolling mean of daily IC over 60 trading days
@@ -721,14 +726,19 @@ def rolling_icir():
             }), 200
         
         ic_data = pd.read_parquet(ic_store_path)
+        print(f"[DEBUG Rolling ICIR] Loaded {len(ic_data)} records from {ic_store_path}")
+        
         if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
             ic_data["date"] = pd.to_datetime(ic_data["date"])
         
         ic_data = ic_data.sort_values("date")
+        print(f"[DEBUG Rolling ICIR] Date range in raw data: {ic_data['date'].min()} to {ic_data['date'].max()}")
+        print(f"[DEBUG Rolling ICIR] Unique dates in raw data: {ic_data['date'].nunique()}")
         
         # 按日期分组，计算每日平均IC
         daily_stats = ic_data.groupby("date")["ic"].agg(['mean', 'std', 'count']).reset_index()
         daily_stats = daily_stats.sort_values("date").reset_index(drop=True)
+        print(f"[DEBUG Rolling ICIR] After groupby: {len(daily_stats)} daily records, date range: {daily_stats['date'].min()} to {daily_stats['date'].max()}")
         
         # 使用60个交易日滚动窗口计算Rolling ICIR
         # ICIR = mean(IC_60d) / std(IC_60d)
@@ -796,14 +806,19 @@ def rolling_tstat():
             }), 200
         
         ic_data = pd.read_parquet(ic_store_path)
+        print(f"[DEBUG Rolling t-stat] Loaded {len(ic_data)} records from {ic_store_path}")
+        
         if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
             ic_data["date"] = pd.to_datetime(ic_data["date"])
         
         ic_data = ic_data.sort_values("date")
+        print(f"[DEBUG Rolling t-stat] Date range in raw data: {ic_data['date'].min()} to {ic_data['date'].max()}")
+        print(f"[DEBUG Rolling t-stat] Unique dates in raw data: {ic_data['date'].nunique()}")
         
         # 按日期分组，计算每日平均IC
         daily_stats = ic_data.groupby("date")["ic"].agg(['mean', 'std', 'count']).reset_index()
         daily_stats = daily_stats.sort_values("date").reset_index(drop=True)
+        print(f"[DEBUG Rolling t-stat] After groupby: {len(daily_stats)} daily records, date range: {daily_stats['date'].min()} to {daily_stats['date'].max()}")
         
         # 使用60个交易日滚动窗口计算Rolling t-stat
         # t-stat = mean(IC_60d) / std(IC_60d) * sqrt(N)
