@@ -268,9 +268,33 @@
                 return;
             }
             
+            // Filter out null/NaN values for plotting
+            const validIcMean = [];
+            const validIcUpper = [];
+            const validIcLower = [];
+            const validDates = [];
+            data.ic_mean.forEach((value, index) => {
+                if (value !== null && value !== undefined && !isNaN(value)) {
+                    validIcMean.push(value);
+                    validIcUpper.push(data.ic_upper[index]);
+                    validIcLower.push(data.ic_lower[index]);
+                    validDates.push(data.dates[index]);
+                }
+            });
+            
+            if (validIcMean.length === 0) {
+                const daysAvailable = data.dates ? data.dates.length : 0;
+                const message = daysAvailable < 60 
+                    ? `Insufficient data: ${daysAvailable} trading days available. Rolling IC requires at least 60 trading days.`
+                    : 'No valid Rolling IC data available';
+                document.getElementById('rolling-ic-chart').innerHTML = 
+                    `<p class="text-muted text-center py-5"><i class="fas fa-info-circle me-1"></i>${message}</p>`;
+                return;
+            }
+            
             const trace = {
-                x: data.dates,
-                y: data.ic_mean,
+                x: validDates,
+                y: validIcMean,
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Mean IC',
@@ -278,8 +302,8 @@
             };
             
             const trace_upper = {
-                x: data.dates,
-                y: data.ic_upper,
+                x: validDates,
+                y: validIcUpper,
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Upper Bound',
@@ -290,8 +314,8 @@
             };
             
             const trace_lower = {
-                x: data.dates,
-                y: data.ic_lower,
+                x: validDates,
+                y: validIcLower,
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Lower Bound',
@@ -349,7 +373,12 @@
             
             if (validData.length === 0) {
                 console.warn('Rolling ICIR: No valid data after filtering NaN');
-                document.getElementById('rolling-icir-chart').innerHTML = '<p class="text-muted text-center py-5">No valid ICIR data available</p>';
+                const daysAvailable = data.dates ? data.dates.length : 0;
+                const message = daysAvailable < 60 
+                    ? `Insufficient data: ${daysAvailable} trading days available. Rolling ICIR requires at least 60 trading days.`
+                    : 'No valid ICIR data available';
+                document.getElementById('rolling-icir-chart').innerHTML = 
+                    `<p class="text-muted text-center py-5"><i class="fas fa-info-circle me-1"></i>${message}</p>`;
                 return;
             }
             
@@ -394,9 +423,30 @@
                 return;
             }
             
+            // Filter out null/NaN values for plotting
+            const validData = [];
+            const validDates = [];
+            data.tstat.forEach((value, index) => {
+                if (value !== null && value !== undefined && !isNaN(value)) {
+                    validData.push(value);
+                    validDates.push(data.dates[index]);
+                }
+            });
+            
+            if (validData.length === 0) {
+                console.warn('Rolling t-stat: No valid data after filtering NaN');
+                const daysAvailable = data.dates ? data.dates.length : 0;
+                const message = daysAvailable < 60 
+                    ? `Insufficient data: ${daysAvailable} trading days available. Rolling t-stat requires at least 60 trading days.`
+                    : 'No valid t-stat data available';
+                document.getElementById('rolling-tstat-chart').innerHTML = 
+                    `<p class="text-muted text-center py-5"><i class="fas fa-info-circle me-1"></i>${message}</p>`;
+                return;
+            }
+            
             const trace = {
-                x: data.dates,
-                y: data.tstat,
+                x: validDates,
+                y: validData,
                 type: 'scatter',
                 mode: 'lines',
                 name: 't-stat',
@@ -404,18 +454,18 @@
             };
             
             const shapes = [];
-            if (data.dates.length > 0) {
+            if (validDates.length > 0) {
                 shapes.push({
                     type: 'line',
-                    x0: data.dates[0],
-                    x1: data.dates[data.dates.length - 1],
+                    x0: validDates[0],
+                    x1: validDates[validDates.length - 1],
                     y0: 1.96,
                     y1: 1.96,
                     line: { color: 'red', width: 1, dash: 'dash' }
                 }, {
                     type: 'line',
-                    x0: data.dates[0],
-                    x1: data.dates[data.dates.length - 1],
+                    x0: validDates[0],
+                    x1: validDates[validDates.length - 1],
                     y0: -1.96,
                     y1: -1.96,
                     line: { color: 'red', width: 1, dash: 'dash' }

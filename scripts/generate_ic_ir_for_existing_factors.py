@@ -158,40 +158,29 @@ def generate_ic_ir_for_existing_factors(cfg, start_date=None, end_date=None):
             # 记录错误但继续处理
             pass
     
-    # 计算ICIR（使用滚动窗口）
-    print("\n[Info] 计算ICIR（使用60天滚动窗口）...")
+    # 计算ICIR（使用60天滚动窗口）
+    # Note: ICIR is calculated per-factor using rolling window, but stored in the same file
+    # The API endpoint will recalculate ICIR using daily aggregated IC (across all factors)
+    print("\n[Info] ICIR将在API端点使用60天滚动窗口实时计算（基于每日聚合IC）")
+    print("[Info] 此处只保存每日IC数据，ICIR留空（由API计算）")
     ic_df = pd.DataFrame(all_ic_data)
     
-    if len(ic_df) > 0:
-        # 按因子分组，计算滚动ICIR
-        for factor_name in ic_df["factor"].unique():
-            factor_ic = ic_df[ic_df["factor"] == factor_name].sort_values("date")
-            factor_ic = factor_ic[factor_ic["ic"].notna()]
-            
-            if len(factor_ic) > 0:
-                # 使用60天滚动窗口计算ICIR
-                window = min(60, len(factor_ic))
-                if window > 1:
-                    rolling_ic_mean = factor_ic["ic"].rolling(window=window, min_periods=1).mean()
-                    rolling_ic_std = factor_ic["ic"].rolling(window=window, min_periods=1).std()
-                    rolling_icir = rolling_ic_mean / rolling_ic_std
-                    rolling_icir = rolling_icir.fillna(0.0)
-                    
-                    # 更新ICIR值
-                    for idx, row in factor_ic.iterrows():
-                        date = row["date"]
-                        icir_value = rolling_icir.loc[date] if date in rolling_icir.index else 0.0
-                        ic_df.loc[(ic_df["date"] == date) & (ic_df["factor"] == factor_name), "icir"] = icir_value
-        
-        # 保存IC/ICIR数据
-        ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
-        ic_df.to_parquet(ic_store_path)
-        print(f"\n[成功] IC/ICIR数据已保存到 {ic_store_path}")
-        print(f"[Info] 总记录数: {len(ic_df)}")
-        print(f"[Info] 有效IC数: {ic_df['ic'].notna().sum()}")
-        print(f"[Info] 有效ICIR数: {ic_df['icir'].notna().sum()}")
-    else:
-        print("\n[错误] 没有生成任何IC数据")
+    # ICIR不在这里计算，因为API端点是按日期聚合所有因子的IC后计算滚动ICIR
+    # 这样可以与Rolling ICIR (60D)的计算方式保持一致
+    # 将所有ICIR设置为NaN（由API计算）
+    if 'icir' not in ic_df.columns:
+        ic_df['icir'] = np.nan
+    
+    # 保存IC/ICIR数据
+    ic_store_path = factor_store_path.parent / "factor_ic_ir.parquet"
+    ic_df.to_parquet(ic_store_path)
+    print(f"\n[成功] IC/ICIR数据已保存到 {ic_store_path}")
+    print(f"[Info] 总记录数: {len(ic_df)}")
+    print(f"[Info] 有效IC数: {ic_df['ic'].notna().sum()}")
+    print(f"[Info] 日期范围: {ic_df['date'].min()} 到 {ic_df['date'].max()}")
+    print(f"[Info] 交易天数: {ic_df['date'].nunique()}")
+    if ic_df['date'].nunique() < 60:
+        print(f"[提示] 当前只有 {ic_df['date'].nunique()} 个交易日，Rolling IC/ICIR/t-stat需要至少60个交易日")
 
 if __name__ == "__main__":
     import argparse
