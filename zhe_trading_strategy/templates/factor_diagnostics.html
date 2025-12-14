@@ -65,7 +65,7 @@
         <!-- 1. Rolling IC Curve -->
         <div class="card diagnostic-card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Rolling IC Curve (12 months)</h5>
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Rolling IC (60D)</h5>
             </div>
             <div class="card-body">
                 <div id="rolling-ic-chart" class="chart-container"></div>
@@ -77,7 +77,7 @@
             <div class="col-md-6">
                 <div class="card diagnostic-card">
                     <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Rolling ICIR</h5>
+                        <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Rolling ICIR (60D)</h5>
                     </div>
                     <div class="card-body">
                         <div id="rolling-icir-chart" class="chart-container"></div>
@@ -87,7 +87,7 @@
             <div class="col-md-6">
                 <div class="card diagnostic-card">
                     <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Rolling t-stat</h5>
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Rolling t-stat (60D)</h5>
                     </div>
                     <div class="card-body">
                         <div id="rolling-tstat-chart" class="chart-container"></div>
@@ -292,7 +292,7 @@
             const chartEl = document.getElementById('rolling-ic-chart');
             if (chartEl) {
                 Plotly.newPlot('rolling-ic-chart', [trace_lower, trace_upper, trace], {
-                    title: 'Rolling IC',
+                    title: 'Rolling IC (60D)',
                     xaxis: { title: 'Date' },
                     yaxis: { title: 'IC Value' },
                     hovermode: 'x unified',
@@ -353,7 +353,7 @@
             const chartEl = document.getElementById('rolling-icir-chart');
             if (chartEl) {
                 Plotly.newPlot('rolling-icir-chart', [trace], {
-                    title: 'Rolling ICIR',
+                    title: 'Rolling ICIR (60D)',
                     xaxis: { title: 'Date' },
                     yaxis: { title: 'ICIR Value' },
                     hovermode: 'x unified',
@@ -411,7 +411,7 @@
             }
             
             Plotly.newPlot('rolling-tstat-chart', [trace], {
-                title: 'Rolling t-stat',
+                title: 'Rolling t-stat (60D)',
                 xaxis: { title: 'Date' },
                 yaxis: { title: 't-stat Value' },
                 hovermode: 'x unified',
