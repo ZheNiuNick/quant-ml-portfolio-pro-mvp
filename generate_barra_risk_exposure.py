@@ -551,14 +551,35 @@ def generate_barra_risk_exposure():
                     for style_name in style_factors_ortho.columns:
                         risk_contributions[style_name] = 0.0
                 
+                # REGRESSION GUARD: Ensure we only save style factor names, not raw factor names
+                # Valid style factors are the keys in style_factors_ortho.columns (bucket names)
+                valid_style_factor_names = set(style_factors_ortho.columns)
+                
+                # Filter risk_contributions to only include style factors
+                filtered_risk_contributions = {
+                    name: value for name, value in risk_contributions.items() 
+                    if name in valid_style_factor_names
+                }
+                
+                # Warn if any raw factors were found
+                raw_factor_patterns = ['Alpha', 'AD', 'OBV', 'ADOSC', 'BB_', 'SMA_', 'EMA_', 'WMA_', 
+                                     'DEMA_', 'RSI_', 'CCI_', 'STOCH', 'WILLR_', 'AROON', 'MACD',
+                                     'MOM_', 'ROC_', 'MFI_', 'ATR_', 'NATR_', 'BOP', 'CUSTOM_']
+                for factor_name in risk_contributions.keys():
+                    if factor_name not in valid_style_factor_names:
+                        is_raw = any(pattern in factor_name for pattern in raw_factor_patterns)
+                        if is_raw:
+                            warnings.warn(f"[REGRESSION GUARD] Raw factor '{factor_name}' detected in risk_contributions! "
+                                        f"Only style factors should be present. Valid style factors: {valid_style_factor_names}")
+                
                 # Sort by risk contribution
-                sorted_styles = sorted(risk_contributions.items(), key=lambda x: x[1], reverse=True)
+                sorted_styles = sorted(filtered_risk_contributions.items(), key=lambda x: x[1], reverse=True)
                 
                 # Convert specific_risk_per_stock to scalar for output
                 specific_risk_scalar = float(specific_risk_per_stock) if specific_risk_per_stock is not None else None
                 
                 results[str(date_obj.date())] = {
-                    "factors": [s[0] for s in sorted_styles],
+                    "factors": [s[0] for s in sorted_styles],  # Style factor names only
                     "exposures": [round(portfolio_exposures.get(s[0], 0.0), 4) for s in sorted_styles],
                     "risk_contributions": [round(s[1], 2) for s in sorted_styles],
                     "specific_risk_contribution": round(specific_risk_contribution, 2),

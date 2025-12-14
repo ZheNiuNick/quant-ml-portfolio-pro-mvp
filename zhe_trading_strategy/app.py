@@ -1222,12 +1222,60 @@ def risk_exposure():
             }), 200
         
         result = data[selected_date]
+        
+        # VALIDATION: Filter out raw factor names - only allow style factor names
+        # Style factors are: Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom
+        valid_style_factors = {
+            'Price/Level', 'Trend', 'Momentum', 'Volatility', 'Liquidity', 
+            'Quality/Stability', 'Custom'
+        }
+        
+        # Patterns that indicate raw factors (should be filtered out)
+        raw_factor_patterns = [
+            'Alpha', 'AD', 'OBV', 'ADOSC', 'BB_', 'SMA_', 'EMA_', 'WMA_', 
+            'DEMA_', 'RSI_', 'CCI_', 'STOCH', 'WILLR_', 'AROON', 'MACD',
+            'MOM_', 'ROC_', 'MFI_', 'ATR_', 'NATR_', 'BOP', 'CUSTOM_'
+        ]
+        
+        def is_raw_factor(factor_name: str) -> bool:
+            """Check if factor_name is a raw factor (not a style factor)"""
+            if factor_name in valid_style_factors:
+                return False
+            # Check if it matches any raw factor pattern
+            for pattern in raw_factor_patterns:
+                if pattern in factor_name:
+                    return True
+            return False
+        
+        # Filter factors, exposures, and risk_contributions to only include style factors
+        filtered_factors = []
+        filtered_exposures = []
+        filtered_risk_contributions = []
+        
+        for i, factor_name in enumerate(result["factors"]):
+            if not is_raw_factor(factor_name):
+                filtered_factors.append(factor_name)
+                filtered_exposures.append(result["exposures"][i])
+                filtered_risk_contributions.append(result["risk_contributions"][i])
+            else:
+                # Log warning for debugging
+                print(f"[WARN] Filtering out raw factor '{factor_name}' from risk exposure results")
+        
+        # If no valid style factors found, return error
+        if len(filtered_factors) == 0:
+            return jsonify({
+                "error": f"数据包含原始因子名称而非风格因子。请重新运行 generate_barra_risk_exposure.py 生成数据。",
+                "factors": [],
+                "exposures": [],
+                "risk_contributions": []
+            }), 200
+        
         return jsonify({
             "error": None,
             "date": selected_date,
-            "factors": result["factors"],
-            "exposures": result["exposures"],
-            "risk_contributions": result["risk_contributions"],
+            "factors": filtered_factors,
+            "exposures": filtered_exposures,
+            "risk_contributions": filtered_risk_contributions,
             "specific_risk_contribution": result.get("specific_risk_contribution", 0),
             "specific_risk": result.get("specific_risk", None)
         })

@@ -998,28 +998,75 @@
             // Clear any existing error messages
             chartEl.innerHTML = '';
             
+            // FRONTEND VALIDATION: Filter out any raw factors that might have slipped through
+            // Valid style factors only
+            const validStyleFactors = new Set([
+                'Price/Level', 'Trend', 'Momentum', 'Volatility', 'Liquidity', 
+                'Quality/Stability', 'Custom'
+            ]);
+            
+            // Patterns that indicate raw factors
+            const rawFactorPatterns = [
+                /^Alpha/, /^AD$/, /^OBV$/, /^ADOSC/, /^BB_/, /^SMA_/, /^EMA_/, 
+                /^WMA_/, /^DEMA_/, /^RSI_/, /^CCI_/, /^STOCH/, /^WILLR_/, 
+                /^AROON/, /^MACD/, /^MOM_/, /^ROC_/, /^MFI_/, /^ATR_/, 
+                /^NATR_/, /^BOP$/, /^CUSTOM_/
+            ];
+            
+            function isRawFactor(factorName) {
+                if (validStyleFactors.has(factorName)) {
+                    return false;
+                }
+                return rawFactorPatterns.some(pattern => pattern.test(factorName));
+            }
+            
+            // Filter factors to only include style factors
+            const filteredFactors = [];
+            const filteredExposures = [];
+            const filteredRiskContributions = [];
+            
+            data.factors.forEach((factor, idx) => {
+                if (!isRawFactor(factor)) {
+                    filteredFactors.push(factor);
+                    filteredExposures.push(data.exposures[idx]);
+                    filteredRiskContributions.push(data.risk_contributions[idx]);
+                } else {
+                    console.warn(`[Risk Exposure] Filtering out raw factor '${factor}' from display`);
+                }
+            });
+            
+            // If no valid style factors, show error
+            if (filteredFactors.length === 0) {
+                document.getElementById('risk-exposure-chart').innerHTML = 
+                    '<p class="text-danger text-center py-5">错误: 数据包含原始因子名称而非风格因子。请重新生成数据。</p>';
+                document.getElementById('risk-exposure-table').innerHTML = '';
+                document.getElementById('risk-exposure-explanation').innerHTML = '';
+                return;
+            }
+            
+            // Use filtered data for chart (style factors only)
             const trace = {
-                x: data.factors,
-                y: data.exposures,
+                x: filteredFactors,
+                y: filteredExposures,
                 type: 'bar',
-                marker: { color: data.exposures.map(e => e > 0 ? '#28a745' : '#dc3545') }
+                marker: { color: filteredExposures.map(e => e > 0 ? '#28a745' : '#dc3545') }
             };
             
             Plotly.newPlot('risk-exposure-chart', [trace], {
                 title: `Risk Exposure (Barra-style) - ${date}`,
-                xaxis: { title: 'Factor' },
+                xaxis: { title: 'Style Factor' },
                 yaxis: { title: 'Exposure' },
                 template: 'plotly_white'
             });
             
-            // Show risk exposure table
+            // Show risk exposure table (only style factors)
             let tableHtml = '<table class="table table-striped"><thead><tr><th>Style Factor</th><th>Exposure</th><th>Risk Contribution</th></tr></thead><tbody>';
-            data.factors.forEach((factor, idx) => {
+            filteredFactors.forEach((factor, idx) => {
                 // Risk contribution is already in percentage from backend (0-100), no need to multiply by 100
-                const riskContrib = data.risk_contributions[idx];
+                const riskContrib = filteredRiskContributions[idx];
                 tableHtml += `<tr>
                     <td><strong>${factor}</strong></td>
-                    <td>${data.exposures[idx].toFixed(4)}</td>
+                    <td>${filteredExposures[idx].toFixed(4)}</td>
                     <td>${typeof riskContrib === 'number' ? riskContrib.toFixed(2) : '0.00'}%</td>
                 </tr>`;
             });
