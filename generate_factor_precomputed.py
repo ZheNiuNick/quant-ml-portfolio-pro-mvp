@@ -221,32 +221,47 @@ def generate_correlation_matrix():
         factors = list(recent_factors.columns)[:50]
         factor_subset = recent_factors[factors]
         
-        # 计算相关性矩阵（按日期平均）
-        dates = factor_subset.index.get_level_values(0).unique()
-        corr_list = []
-        
+        # 计算相关性矩阵（正确的方法：直接对所有数据进行相关性计算）
+        # 方法1: 按日期计算后正确平均（需要对齐因子名称）
+        # 方法2: 直接对所有(date, ticker)对计算相关性（推荐，确保正确对齐）
         print(f"📊 计算 {len(factors)} 个因子的相关性...")
-        for i, date in enumerate(dates, 1):
-            if i % 50 == 0:
-                print(f"  处理进度: {i}/{len(dates)}")
-            date_factors = factor_subset.loc[factor_subset.index.get_level_values(0) == date]
-            if len(date_factors) > 10:
-                corr = date_factors.corr(method='pearson')
-                corr_list.append(corr)
         
-        if len(corr_list) == 0:
-            print("❌ 没有足够的数据计算相关性")
+        # 移除缺失值过多的因子和样本
+        factor_subset_clean = factor_subset.dropna(axis=1, thresh=len(factor_subset) * 0.5)  # 至少50%的数据点
+        factor_subset_clean = factor_subset_clean.dropna(axis=0, thresh=len(factor_subset_clean.columns) * 0.5)  # 至少50%的因子
+        
+        # 确保所有因子都在clean后的数据中
+        factors_clean = [f for f in factors if f in factor_subset_clean.columns]
+        if len(factors_clean) < 2:
+            print("❌ 清理后因子数量不足，无法计算相关性")
             return False
         
-        # 平均相关性矩阵
-        mean_corr = pd.concat(corr_list).groupby(level=0).mean()
-        mean_corr = mean_corr.fillna(0)
+        factor_subset_clean = factor_subset_clean[factors_clean]
+        
+        print(f"  使用 {len(factors_clean)} 个有效因子，{len(factor_subset_clean)} 个数据点")
+        
+        # 直接计算相关性矩阵（跨所有日期和资产）
+        # 这样可以确保正确对齐，对角线值为1.0
+        corr_matrix = factor_subset_clean.corr(method='pearson')
+        
+        # 确保对角线为1.0（处理数值误差）
+        np.fill_diagonal(corr_matrix.values, 1.0)
+        
+        # 确保矩阵是对称的（处理数值误差）
+        corr_matrix = (corr_matrix + corr_matrix.T) / 2
+        np.fill_diagonal(corr_matrix.values, 1.0)
+        
+        # 填充NaN为0（对于没有足够共同样本的因子对）
+        corr_matrix = corr_matrix.fillna(0.0)
+        
+        # 使用清理后的因子列表
+        factors = factors_clean
         
         # 保存结果
         output_file = OUTPUT_DIR / "factor_corr.json"
         result = {
             "factors": factors,
-            "correlation_matrix": mean_corr.values.tolist(),
+            "correlation_matrix": corr_matrix.values.tolist(),
             "method": "pearson"
         }
         
@@ -326,13 +341,25 @@ def generate_risk_exposure():
                 if isinstance(date_factors.index, pd.MultiIndex):
                     date_factors = date_factors.reset_index(level='date', drop=True)
                 
-                # 3. 获取当日投资组合权重
+                # 3. 获取当日投资组合权重（如果不存在，使用最接近的日期）
                 portfolio_weights = None
                 portfolio_tickers = None
+                weight_date_used = None
                 if weights_df is not None:
                     # 查找最接近的日期权重
                     if date_obj in weights_df.index:
+                        weight_date_used = date_obj
                         portfolio_weights_series = weights_df.loc[date_obj].fillna(0.0)
+                    else:
+                        # 使用最接近的日期（之前最近的一个交易日）
+                        available_dates_before = weights_df.index[weights_df.index <= date_obj]
+                        if len(available_dates_before) > 0:
+                            weight_date_used = available_dates_before.max()
+                            portfolio_weights_series = weights_df.loc[weight_date_used].fillna(0.0)
+                        else:
+                            portfolio_weights_series = None
+                    
+                    if portfolio_weights_series is not None:
                         portfolio_weights_series = portfolio_weights_series[portfolio_weights_series > 0]
                         if len(portfolio_weights_series) > 0:
                             portfolio_weights = portfolio_weights_series
@@ -377,7 +404,11 @@ def generate_risk_exposure():
                             # 计算风险贡献：使用投资组合中股票因子值的加权方差
                             weighted_mean = (portfolio_weights_aligned * portfolio_factor_values).sum()
                             weighted_variance = ((portfolio_weights_aligned * (portfolio_factor_values - weighted_mean) ** 2).sum())
-                            portfolio_risk_contributions[factor_name] = weighted_variance
+                            # 处理NaN和无穷值
+                            if pd.isna(weighted_variance) or np.isinf(weighted_variance):
+                                portfolio_risk_contributions[factor_name] = 0.0
+                            else:
+                                portfolio_risk_contributions[factor_name] = float(weighted_variance)
                         else:
                             portfolio_exposures[factor_name] = 0.0
                             portfolio_risk_contributions[factor_name] = 0.0
@@ -392,11 +423,31 @@ def generate_risk_exposure():
                             portfolio_exposures[factor_name] = 0.0
                         portfolio_risk_contributions[factor_name] = float(factor_series.var())
                 
-                # 5. 归一化风险贡献
+                # 5. 归一化风险贡献（过滤NaN和无穷值）
+                # 先过滤掉无效值并确保所有值都是有效的浮点数
+                cleaned_risk_contributions = {}
+                for k, v in portfolio_risk_contributions.items():
+                    # 转换为浮点数，处理NaN和无穷值
+                    try:
+                        v_float = float(v)
+                        if pd.isna(v_float) or np.isinf(v_float) or v_float < 0:
+                            cleaned_risk_contributions[k] = 0.0
+                        else:
+                            cleaned_risk_contributions[k] = v_float
+                    except (ValueError, TypeError):
+                        cleaned_risk_contributions[k] = 0.0
+                
+                portfolio_risk_contributions = cleaned_risk_contributions
                 total_risk = sum(portfolio_risk_contributions.values())
-                if total_risk > 0:
+                
+                if total_risk > 0 and not (pd.isna(total_risk) or np.isinf(total_risk)):
+                    # 归一化风险贡献
                     for factor_name in portfolio_risk_contributions:
                         portfolio_risk_contributions[factor_name] = portfolio_risk_contributions[factor_name] / total_risk
+                else:
+                    # 如果总风险为0或无效，所有贡献设为0
+                    for factor_name in portfolio_risk_contributions:
+                        portfolio_risk_contributions[factor_name] = 0.0
                 
                 # 6. 排序（按风险贡献，取前50个）
                 sorted_factors = sorted(portfolio_risk_contributions.items(), key=lambda x: x[1], reverse=True)[:50]
