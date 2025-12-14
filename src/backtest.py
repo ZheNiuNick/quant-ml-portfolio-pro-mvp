@@ -27,7 +27,7 @@ def load_settings(path = SETTINGS_FILE) -> Dict:
     """加载配置文件，支持绝对路径和相对路径"""
     if isinstance(path, str):
         path = get_path(path) if not os.path.isabs(path) else Path(path)
-    else:
+        else:
         path = get_path(str(path)) if not path.is_absolute() else path
     
     with open(path, "r") as f:
