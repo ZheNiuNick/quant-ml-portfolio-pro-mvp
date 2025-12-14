@@ -728,8 +728,16 @@
             const response = await fetch(url);
             const data = await response.json();
             
-            if (data.error || !data.clusters) {
-                console.warn('Factor Clusters Analysis data is empty:', data.error || 'No data');
+            if (data.error) {
+                console.error('Factor Clusters Analysis error:', data.error);
+                document.getElementById('factor-cluster-chart').innerHTML = `<p class="text-danger text-center py-5"><strong>Error:</strong> ${data.error}<br><small>Please ensure factor_style_exposure.parquet exists in data/factors/</small></p>`;
+                document.getElementById('factor-cluster-table').innerHTML = '';
+                document.getElementById('factor-cluster-explanation').innerHTML = '';
+                return;
+            }
+            
+            if (!data.clusters || typeof data.clusters !== 'object') {
+                console.warn('Factor Clusters Analysis data is empty: clusters is missing or invalid');
                 document.getElementById('factor-cluster-chart').innerHTML = '<p class="text-muted text-center py-5">No data available</p>';
                 document.getElementById('factor-cluster-table').innerHTML = '';
                 document.getElementById('factor-cluster-explanation').innerHTML = '';
