@@ -96,7 +96,12 @@ def generate_barra_risk_exposure():
             if bucket != 'Unclassified':
                 print(f"  {bucket}: {len(factors)} factors")
         if 'Unclassified' in classified:
-            print(f"  Unclassified: {len(classified['Unclassified'])} factors")
+            unclassified_count = len(classified['Unclassified'])
+            print(f"  Unclassified: {unclassified_count} factors (will be included in style construction via Custom bucket)")
+            # Add Unclassified factors to Custom bucket for style construction
+            if 'Custom' not in classified:
+                classified['Custom'] = []
+            classified['Custom'].extend(classified['Unclassified'])
         
         # Get dates to process (last 30 trading days)
         available_dates = pd.to_datetime(factor_store.index.get_level_values(0).unique()).sort_values()
@@ -256,11 +261,14 @@ def generate_barra_risk_exposure():
                             portfolio_weights = portfolio_weights_series / portfolio_weights_series.sum()
                 
                 # Step 1: Normalize factors within each bucket
+                # Use classified factors (includes Unclassified → Custom mapping)
                 normalized_bucket_factors = {}
-                for bucket_name, factor_patterns in model.factor_taxonomy.items():
-                    bucket_factor_names = []
-                    for pattern in factor_patterns:
-                        bucket_factor_names.extend([f for f in date_factors.columns if pattern in f])
+                for bucket_name, factor_names_list in classified.items():
+                    if bucket_name == 'Unclassified':
+                        continue  # Already mapped to Custom
+                    
+                    # Use the actual classified factor names (not pattern matching again)
+                    bucket_factor_names = [f for f in factor_names_list if f in date_factors.columns]
                     
                     if len(bucket_factor_names) == 0:
                         continue
