@@ -668,12 +668,28 @@ def rolling_ic():
         ic_upper_list = [None if pd.isna(x) else float(x) for x in daily_ic["ic_upper"]]
         ic_lower_list = [None if pd.isna(x) else float(x) for x in daily_ic["ic_lower"]]
         
+        # Debugging fields
+        raw_ic_count = len(daily_ic)
+        non_null_ic_count = daily_ic["mean"].notna().sum()
+        returned_count = len(ic_mean_list)
+        date_min = daily_ic["date"].min().strftime("%Y-%m-%d") if len(daily_ic) > 0 else None
+        date_max = daily_ic["date"].max().strftime("%Y-%m-%d") if len(daily_ic) > 0 else None
+        
         return jsonify({
             "error": None,
             "dates": [d.strftime("%Y-%m-%d") for d in daily_ic["date"]],
             "ic_mean": ic_mean_list,
             "ic_upper": ic_upper_list,
-            "ic_lower": ic_lower_list
+            "ic_lower": ic_lower_list,
+            # Debugging fields (temporary)
+            "_debug": {
+                "raw_ic_count": raw_ic_count,
+                "non_null_ic_count": non_null_ic_count,
+                "returned_count": returned_count,
+                "date_min": date_min,
+                "date_max": date_max,
+                "rolling_window": ROLLING_WINDOW
+            }
         })
     except Exception as e:
         import traceback
@@ -730,10 +746,26 @@ def rolling_icir():
         # 转换为列表，None会保持为None（JSON序列化为null）
         icir_list = [None if pd.isna(x) else float(x) if x is not None else None for x in daily_stats["icir"]]
         
+        # Debugging fields
+        raw_ic_count = len(daily_stats)
+        non_null_ic_count = daily_stats["mean"].notna().sum()
+        returned_count = len(icir_list)
+        date_min = daily_stats["date"].min().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
+        date_max = daily_stats["date"].max().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
+        
         return jsonify({
             "error": None,
             "dates": [d.strftime("%Y-%m-%d") for d in daily_stats["date"]],
-            "icir": icir_list
+            "icir": icir_list,
+            # Debugging fields (temporary)
+            "_debug": {
+                "raw_ic_count": raw_ic_count,
+                "non_null_ic_count": non_null_ic_count,
+                "returned_count": returned_count,
+                "date_min": date_min,
+                "date_max": date_max,
+                "rolling_window": ROLLING_WINDOW
+            }
         })
     except Exception as e:
         import traceback
@@ -795,10 +827,26 @@ def rolling_tstat():
         # 转换为列表，None会保持为None（JSON序列化为null）
         tstat_list = [None if pd.isna(x) else float(x) if x is not None else None for x in daily_stats["tstat"]]
         
+        # Debugging fields
+        raw_ic_count = len(daily_stats)
+        non_null_ic_count = daily_stats["mean"].notna().sum()
+        returned_count = len(tstat_list)
+        date_min = daily_stats["date"].min().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
+        date_max = daily_stats["date"].max().strftime("%Y-%m-%d") if len(daily_stats) > 0 else None
+        
         return jsonify({
             "error": None,
             "dates": [d.strftime("%Y-%m-%d") for d in daily_stats["date"]],
-            "tstat": tstat_list
+            "tstat": tstat_list,
+            # Debugging fields (temporary)
+            "_debug": {
+                "raw_ic_count": raw_ic_count,
+                "non_null_ic_count": non_null_ic_count,
+                "returned_count": returned_count,
+                "date_min": date_min,
+                "date_max": date_max,
+                "rolling_window": ROLLING_WINDOW
+            }
         })
     except Exception as e:
         import traceback

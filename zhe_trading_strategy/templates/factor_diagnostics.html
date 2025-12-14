@@ -259,8 +259,23 @@
     async function loadRollingIC() {
         try {
             const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-ic` : '/api/factor-diagnostics/rolling-ic';
+            console.log('[Rolling IC] Requesting URL:', url);
+            console.log('[Rolling IC] No date filters applied - requesting full history');
             const response = await fetch(url);
             const data = await response.json();
+            
+            // Log debugging information
+            if (data._debug) {
+                console.log('[Rolling IC] Debug info:', {
+                    raw_ic_count: data._debug.raw_ic_count,
+                    non_null_ic_count: data._debug.non_null_ic_count,
+                    returned_count: data._debug.returned_count,
+                    date_min: data._debug.date_min,
+                    date_max: data._debug.date_max,
+                    rolling_window: data._debug.rolling_window,
+                    actual_dates_length: data.dates ? data.dates.length : 0
+                });
+            }
             
             if (data.error || !data.dates || data.dates.length === 0) {
                 console.warn('Rolling IC data is empty:', data.error || 'No data');
@@ -355,8 +370,23 @@
     async function loadRollingICIR() {
         try {
             const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-icir` : '/api/factor-diagnostics/rolling-icir';
+            console.log('[Rolling ICIR] Requesting URL:', url);
+            console.log('[Rolling ICIR] No date filters applied - requesting full history');
             const response = await fetch(url);
             const data = await response.json();
+            
+            // Log debugging information
+            if (data._debug) {
+                console.log('[Rolling ICIR] Debug info:', {
+                    raw_ic_count: data._debug.raw_ic_count,
+                    non_null_ic_count: data._debug.non_null_ic_count,
+                    returned_count: data._debug.returned_count,
+                    date_min: data._debug.date_min,
+                    date_max: data._debug.date_max,
+                    rolling_window: data._debug.rolling_window,
+                    actual_dates_length: data.dates ? data.dates.length : 0
+                });
+            }
             
             if (data.error || !data.dates || data.dates.length === 0) {
                 console.warn('Rolling ICIR data is empty:', data.error || 'No data');
@@ -420,8 +450,23 @@
     async function loadRollingTStat() {
         try {
             const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/rolling-tstat` : '/api/factor-diagnostics/rolling-tstat';
+            console.log('[Rolling t-stat] Requesting URL:', url);
+            console.log('[Rolling t-stat] No date filters applied - requesting full history');
             const response = await fetch(url);
             const data = await response.json();
+            
+            // Log debugging information
+            if (data._debug) {
+                console.log('[Rolling t-stat] Debug info:', {
+                    raw_ic_count: data._debug.raw_ic_count,
+                    non_null_ic_count: data._debug.non_null_ic_count,
+                    returned_count: data._debug.returned_count,
+                    date_min: data._debug.date_min,
+                    date_max: data._debug.date_max,
+                    rolling_window: data._debug.rolling_window,
+                    actual_dates_length: data.dates ? data.dates.length : 0
+                });
+            }
             
             if (data.error || !data.dates || data.dates.length === 0) {
                 console.warn('Rolling t-stat data is empty:', data.error || 'No data');
