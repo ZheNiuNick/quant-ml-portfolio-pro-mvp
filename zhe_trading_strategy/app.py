@@ -1165,10 +1165,18 @@ def factor_clusters():
                 icir_value = float(icir_value)
             
             # Get top exposures from precomputed dict (from canonical matrix)
-            top_exposures = row.get("top_exposures_dict", {})
+            # Handle both dict and Series/list types
+            top_exposures_raw = row.get("top_exposures_dict", {})
             
             # Ensure top_exposures is a dict (never N/A)
-            if not isinstance(top_exposures, dict):
+            if isinstance(top_exposures_raw, dict):
+                top_exposures = top_exposures_raw
+            elif hasattr(top_exposures_raw, 'to_dict'):  # pandas Series
+                top_exposures = top_exposures_raw.to_dict()
+            elif isinstance(top_exposures_raw, (list, tuple)) and len(top_exposures_raw) > 0:
+                # If it's a list/tuple, try to convert
+                top_exposures = dict(top_exposures_raw) if isinstance(top_exposures_raw[0], (list, tuple)) and len(top_exposures_raw[0]) == 2 else {}
+            else:
                 top_exposures = {}
             
             # Validate top_style_exposure is numeric
