@@ -1043,16 +1043,14 @@ def long_short_performance():
 
 @app.route('/api/factor-diagnostics/clusters')
 def factor_clusters():
-    """Factor Clusters Analysis using Barra-style classification
+    """Factor Clusters Analysis using Barra-style dominant style attribution
     
-    Uses the SAME classification logic as Multi-Factor Risk Exposure (Barra-style).
-    All factors are classified according to Barra taxonomy.
+    Uses precomputed factor style attribution (from generate_factor_style_attribution.py)
+    which computes dominant style based on average style exposure over a rolling window.
+    This ensures Alpha factors are classified correctly by their exposure, not name matching.
     """
     try:
-        # Import BarraRiskModel for classification
-        from src.barra_risk_model import BarraRiskModel
-        
-        # 读取IC/ICIR数据 - 直接使用 DATA_FACTORS_DIR
+        # 读取IC/ICIR数据
         ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
         
         if not ic_store_path.exists():
@@ -1084,45 +1082,45 @@ def factor_clusters():
         factor_stats["tstat"] = factor_stats["ic_mean"] / (factor_stats["ic_std"] / np.sqrt(factor_stats["ic_count"]))
         factor_stats["tstat"] = factor_stats["tstat"].fillna(0)
         
-        # Use BarraRiskModel classification logic
-        # Create a temporary model instance to access taxonomy
-        model = BarraRiskModel()
+        # Load precomputed style attribution
+        attribution_path = DATA_FACTORS_DIR / "factor_style_attribution.parquet"
         
-        # Get all unique factor names
-        all_factor_names = factor_stats["factor"].unique().tolist()
-        
-        # Classify factors using Barra taxonomy
-        # Note: BarraRiskModel.classify_factors() excludes Alpha factors,
-        # but for Factor Clusters Analysis we want to include ALL factors
-        # So we'll use the taxonomy directly to classify all factors
-        
-        # Helper function to classify a single factor using Barra taxonomy
-        def classify_factor_by_barra_taxonomy(factor_name: str) -> str:
-            """Classify factor using Barra taxonomy (includes Alpha factors)"""
-            for bucket_name, patterns in model.factor_taxonomy.items():
-                for pattern in patterns:
-                    if pattern in factor_name:
-                        return bucket_name
+        if not attribution_path.exists():
+            # Fallback: use BarraStyleMapper for on-the-fly classification
+            # This is slower but works if precomputed data is missing
+            print("[WARN] factor_style_attribution.parquet not found, using fallback classification")
+            from src.barra_style_mapper import BarraStyleMapper
             
-            # If not matched by taxonomy patterns:
-            # - Alpha factors go to "Custom" (they are signals, not risk factors)
-            # - Other unclassified factors go to "Custom"
-            if factor_name.startswith('Alpha'):
-                return 'Custom'
-            else:
-                return 'Custom'  # Fallback to Custom for unclassified
+            mapper = BarraStyleMapper()
+            factor_stats["dominant_style"] = factor_stats["factor"].apply(
+                lambda f: mapper.get_raw_factor_to_style_bucket(f) or "Custom"
+            )
+        else:
+            # Load precomputed attribution
+            attribution_df = pd.read_parquet(attribution_path)
+            
+            # Join with factor_stats
+            factor_stats = factor_stats.merge(
+                attribution_df[["factor", "dominant_style"]],
+                on="factor",
+                how="left"
+            )
+            
+            # Fill missing values with "Custom"
+            factor_stats["dominant_style"] = factor_stats["dominant_style"].fillna("Custom")
         
-        # Classify all factors
-        factor_stats["category"] = factor_stats["factor"].apply(classify_factor_by_barra_taxonomy)
+        # Initialize clusters with canonical Barra-style categories
+        from src.barra_style_mapper import BarraStyleMapper
+        canonical_styles = BarraStyleMapper.CANONICAL_STYLES
+        clusters = {style: [] for style in canonical_styles}
         
-        # Initialize clusters with Barra-style category names
-        # Use the same category names as Barra taxonomy
-        barra_categories = list(model.factor_taxonomy.keys())  # Price/Level, Trend, Momentum, Volatility, Liquidity, Quality/Stability, Custom
-        clusters = {category: [] for category in barra_categories}
-        
-        # Group factors by category
+        # Group factors by dominant style
         for _, row in factor_stats.iterrows():
-            category = row["category"]
+            dominant_style = row["dominant_style"]
+            
+            # Ensure style is in canonical list (fallback to Custom if not)
+            if dominant_style not in canonical_styles:
+                dominant_style = "Custom"
             
             # ICIR 如果是 NaN，不转换为 0，而是保持为 None（前端会处理）
             icir_value = row["icir"]
@@ -1131,11 +1129,27 @@ def factor_clusters():
             else:
                 icir_value = float(icir_value)
             
-            clusters[category].append({
+            # Get top 2 style exposures for hover tooltip (if available)
+            top_exposures = {}
+            if attribution_path.exists():
+                factor_attr = attribution_df[attribution_df["factor"] == row["factor"]]
+                if not factor_attr.empty:
+                    exposure_cols = [col for col in attribution_df.columns if col.startswith("style_exposure_")]
+                    exposures = {}
+                    for col in exposure_cols:
+                        style_name = col.replace("style_exposure_", "")
+                        exposures[style_name] = factor_attr[col].iloc[0] if not pd.isna(factor_attr[col].iloc[0]) else 0.0
+                    # Sort by absolute value and take top 2
+                    sorted_exposures = sorted(exposures.items(), key=lambda x: abs(x[1]), reverse=True)
+                    top_exposures = dict(sorted_exposures[:2])
+            
+            clusters[dominant_style].append({
                 "name": row["factor"],
                 "ic_mean": float(row["ic_mean"]) if not pd.isna(row["ic_mean"]) else 0.0,
                 "icir": icir_value,  # 可能是 None（NaN）
-                "tstat": float(row["tstat"]) if not pd.isna(row["tstat"]) else 0.0
+                "tstat": float(row["tstat"]) if not pd.isna(row["tstat"]) else 0.0,
+                "dominant_style": dominant_style,
+                "top_exposures": top_exposures  # For hover tooltip
             })
         
         # Remove empty clusters

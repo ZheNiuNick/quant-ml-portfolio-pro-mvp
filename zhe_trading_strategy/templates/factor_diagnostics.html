@@ -766,7 +766,21 @@
                     mode: 'markers',
                     type: 'scatter',
                     name: category,  // Use exact Barra category name
-                    text: factors.map(f => f.name),
+                    text: factors.map(f => {
+                        // Build hover text for each factor
+                        let hover = f.name;
+                        if (f.dominant_style) {
+                            hover += `<br>Dominant Style: ${f.dominant_style}`;
+                        }
+                        if (f.top_exposures && Object.keys(f.top_exposures).length > 0) {
+                            const top2 = Object.entries(f.top_exposures)
+                                .slice(0, 2)
+                                .map(([style, exp]) => `${style}: ${parseFloat(exp).toFixed(3)}`)
+                                .join(', ');
+                            hover += `<br>Top Exposures: ${top2}`;
+                        }
+                        return hover;
+                    }),
                     marker: { 
                         size: 12, 
                         color: barraColorMap[category] || '#666666'  // Use mapped color or gray default
@@ -805,19 +819,29 @@
         });
         
         // Show factor clusters table (dynamically using categories from API)
-        let tableHtml = '<table class="table table-striped"><thead><tr><th>Barra Style</th><th>Factor</th><th>Mean IC</th><th>ICIR</th><th>t-stat</th></tr></thead><tbody>';
+        let tableHtml = '<table class="table table-striped"><thead><tr><th>Barra Style</th><th>Factor</th><th>Dominant Style</th><th>Mean IC</th><th>ICIR</th><th>t-stat</th><th>Top Style Exposure</th></tr></thead><tbody>';
         categories.forEach(category => {
             const factors = data.clusters[category] || [];
             factors.forEach(factor => {
                 const icir_display = (factor.icir !== null && factor.icir !== undefined) 
                     ? factor.icir.toFixed(4) 
                     : 'N/A';
+                
+                // Get top style exposure for display
+                let topExposureDisplay = 'N/A';
+                if (factor.top_exposures && Object.keys(factor.top_exposures).length > 0) {
+                    const topEntry = Object.entries(factor.top_exposures)[0];
+                    topExposureDisplay = `${topEntry[0]}: ${parseFloat(topEntry[1]).toFixed(3)}`;
+                }
+                
                 tableHtml += `<tr>
                     <td><strong>${category}</strong></td>
                     <td>${factor.name}</td>
+                    <td>${factor.dominant_style || category}</td>
                     <td>${(factor.ic_mean || 0).toFixed(4)}</td>
                     <td>${icir_display}</td>
                     <td>${(factor.tstat || 0).toFixed(2)}</td>
+                    <td>${topExposureDisplay}</td>
                 </tr>`;
             });
         });
