@@ -1366,20 +1366,20 @@ def factor_correlation():
             score = factor_ranking.get(factor, 0.0)
             factor_scores.append((factor, score))
         
-        # Sort by score descending and take actual_top_k
+        # Sort by score descending and take top_k
         factor_scores_sorted = sorted(factor_scores, key=lambda x: x[1], reverse=True)
-        selected_factors = [f[0] for f in factor_scores_sorted[:actual_top_k]]
+        selected_factors = [f[0] for f in factor_scores_sorted[:top_k]]
         
         # Get indices of selected factors in the original matrix
         factor_to_index = {f: i for i, f in enumerate(all_factors)}
         selected_indices = [factor_to_index[f] for f in selected_factors if f in factor_to_index]
         
         # Extract submatrix for selected factors
-        if len(selected_indices) == actual_top_k:
+        if len(selected_indices) == top_k:
             selected_corr_matrix = all_corr_matrix[np.ix_(selected_indices, selected_indices)].tolist()
         else:
             # Handle case where some factors are missing from correlation matrix
-            print(f"[WARN] Only {len(selected_indices)}/{actual_top_k} factors found in correlation matrix")
+            print(f"[WARN] Only {len(selected_indices)}/{top_k} factors found in correlation matrix")
             selected_factors = [all_factors[i] for i in selected_indices]
             selected_corr_matrix = all_corr_matrix[np.ix_(selected_indices, selected_indices)].tolist()
         
