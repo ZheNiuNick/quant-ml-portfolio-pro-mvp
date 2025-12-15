@@ -1,5 +1,5 @@
 {
-  "timestamp": "20251215_103951",
+  "timestamp": "20251215_110557",
   "trades": [
     {
       "time": "2025-12-12 15:57:32",
@@ -982,7 +982,7 @@
       "status": "FILLED"
     }
   ],
-  "total_trades": 98,
-  "new_trades_today": 0,
+  "total_trades": 240,
+  "new_trades_today": 142,
   "source": "ib_insync"
 }
