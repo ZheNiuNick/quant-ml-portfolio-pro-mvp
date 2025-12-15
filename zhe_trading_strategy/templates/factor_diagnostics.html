@@ -431,8 +431,9 @@
                 return;
             }
             
-            // Check if chart already exists (use Plotly.react for updates)
-            const chartExists = chartEl.data && chartEl.data.length > 0;
+            // Check if chart already exists (Plotly adds classes/data when rendered)
+            const chartExists = chartEl.classList.contains('js-plotly-plot') || 
+                                (chartEl._fullLayout !== undefined);
             const plotFn = chartExists ? Plotly.react : Plotly.newPlot;
             
             // Delay initial render until layout is stable
