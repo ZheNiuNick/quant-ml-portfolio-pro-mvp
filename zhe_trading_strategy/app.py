@@ -1268,9 +1268,14 @@ def factor_clusters():
 def factor_correlation():
     """因子相关性矩阵 - 支持 Top-K 因子选择（按 |ICIR| 排序）"""
     method = request.args.get('method', 'pearson')
-    top_k = request.args.get('top_k', '50', type=int)
+    top_k_str = request.args.get('top_k', '50')
     
-    # Validate top_k parameter
+    # Parse and validate top_k parameter
+    try:
+        top_k = int(top_k_str)
+    except (ValueError, TypeError):
+        top_k = 50  # Default to 50 if invalid
+    
     allowed_top_k = {20, 50, 100}
     if top_k not in allowed_top_k:
         return jsonify({
@@ -1361,24 +1366,24 @@ def factor_correlation():
             score = factor_ranking.get(factor, 0.0)
             factor_scores.append((factor, score))
         
-        # Sort by score descending and take top_k
+        # Sort by score descending and take actual_top_k
         factor_scores_sorted = sorted(factor_scores, key=lambda x: x[1], reverse=True)
-        selected_factors = [f[0] for f in factor_scores_sorted[:top_k]]
+        selected_factors = [f[0] for f in factor_scores_sorted[:actual_top_k]]
         
         # Get indices of selected factors in the original matrix
         factor_to_index = {f: i for i, f in enumerate(all_factors)}
         selected_indices = [factor_to_index[f] for f in selected_factors if f in factor_to_index]
         
         # Extract submatrix for selected factors
-        if len(selected_indices) == top_k:
+        if len(selected_indices) == actual_top_k:
             selected_corr_matrix = all_corr_matrix[np.ix_(selected_indices, selected_indices)].tolist()
         else:
             # Handle case where some factors are missing from correlation matrix
-            print(f"[WARN] Only {len(selected_indices)}/{top_k} factors found in correlation matrix")
+            print(f"[WARN] Only {len(selected_indices)}/{actual_top_k} factors found in correlation matrix")
             selected_factors = [all_factors[i] for i in selected_indices]
             selected_corr_matrix = all_corr_matrix[np.ix_(selected_indices, selected_indices)].tolist()
         
-        print(f"[INFO] Selected top {len(selected_factors)} factors by |ICIR| for correlation matrix")
+        print(f"[INFO] Selected top {len(selected_factors)} factors by |ICIR| for correlation matrix (requested: {top_k})")
         
         return jsonify({
             "error": None,
