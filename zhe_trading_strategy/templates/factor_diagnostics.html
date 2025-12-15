@@ -144,21 +144,14 @@
                 <h5 class="mb-0"><i class="fas fa-th me-2"></i>Factor Correlation Matrix</h5>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="correlation-method" class="form-label">Correlation Method:</label>
-                        <select id="correlation-method" class="form-select" onchange="loadCorrelationMatrix()">
-                            <option value="pearson">Pearson</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="correlation-top-k" class="form-label">Factor Subset:</label>
-                        <select id="correlation-top-k" class="form-select" onchange="loadCorrelationMatrix()">
-                            <option value="20">Top 20 Factors</option>
-                            <option value="50" selected>Top 50 Factors</option>
-                            <option value="100">Top 100 Factors</option>
-                        </select>
-                    </div>
+                <div class="mb-3">
+                    <label for="correlation-top-k" class="form-label">Factor Subset:</label>
+                    <select id="correlation-top-k" class="form-select" style="max-width: 300px;" onchange="loadCorrelationMatrix()">
+                        <option value="20">Top 20 Factors</option>
+                        <option value="50" selected>Top 50 Factors</option>
+                        <option value="100">Top 100 Factors</option>
+                    </select>
+                    <small class="form-text text-muted">Using Pearson correlation method</small>
                 </div>
                 <div id="correlation-matrix-chart" class="chart-container" style="height: 600px;"></div>
             </div>
@@ -1053,7 +1046,7 @@
     // 7. Load Correlation Matrix
     async function loadCorrelationMatrix() {
         try {
-            const method = document.getElementById('correlation-method').value;
+            const method = 'pearson';  // Fixed to Pearson
             const topK = document.getElementById('correlation-top-k').value;
             const url = API_BASE_URL 
                 ? `${API_BASE_URL}/api/factor-diagnostics/correlation?method=${method}&top_k=${topK}`

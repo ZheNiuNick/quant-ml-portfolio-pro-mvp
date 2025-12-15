@@ -232,8 +232,8 @@ def generate_correlation_matrix():
         if len(recent_factors) == 0:
             recent_factors = factor_store
         
-        # 选择部分因子（限制为50个）
-        factors = list(recent_factors.columns)[:50]
+        # 选择部分因子（限制为100个，以支持 Top 100 选项）
+        factors = list(recent_factors.columns)[:100]
         factor_subset = recent_factors[factors]
         
         # 计算相关性矩阵（正确的方法：直接对所有数据进行相关性计算）
