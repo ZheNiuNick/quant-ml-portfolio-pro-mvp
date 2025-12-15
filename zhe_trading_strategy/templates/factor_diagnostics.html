@@ -1054,7 +1054,11 @@
     async function loadCorrelationMatrix() {
         try {
             const method = document.getElementById('correlation-method').value;
-            const url = API_BASE_URL ? `${API_BASE_URL}/api/factor-diagnostics/correlation?method=${method}` : `/api/factor-diagnostics/correlation?method=${method}`;
+            const topK = document.getElementById('correlation-top-k').value;
+            const url = API_BASE_URL 
+                ? `${API_BASE_URL}/api/factor-diagnostics/correlation?method=${method}&top_k=${topK}`
+                : `/api/factor-diagnostics/correlation?method=${method}&top_k=${topK}`;
+            
             const response = await fetch(url);
             const data = await response.json();
             
@@ -1064,22 +1068,54 @@
                 return;
             }
         
-        const trace = {
-            z: data.correlation_matrix,
-            x: data.factors,
-            y: data.factors,
-            type: 'heatmap',
-            colorscale: 'RdBu',
-            zmid: 0,
-            colorbar: { title: 'Correlation' }
-        };
+            const actualTopK = data.top_k || data.factors.length;
+            
+            // Create heatmap trace
+            const trace = {
+                z: data.correlation_matrix,
+                x: data.factors,
+                y: data.factors,
+                type: 'heatmap',
+                colorscale: 'RdBu',
+                zmid: 0,
+                zmin: -1,
+                zmax: 1,
+                hovertemplate: 'Factor X: %{x}<br>Factor Y: %{y}<br>Correlation: %{z:.3f}<extra></extra>'
+            };
+            
+            // Update chart with dynamic title and explanatory note
+            const layout = {
+                title: {
+                    text: `Factor Correlation Matrix (Top ${actualTopK} Factors by ICIR)`,
+                    font: { size: 18 }
+                },
+                annotations: [{
+                    text: `This matrix shows pairwise correlations among the top ${actualTopK} candidate factors selected for modeling. It is used to diagnose redundancy and multicollinearity, not to visualize the entire factor library.`,
+                    showarrow: false,
+                    x: 0.5,
+                    y: -0.15,
+                    xref: 'paper',
+                    yref: 'paper',
+                    xanchor: 'center',
+                    yanchor: 'top',
+                    font: { size: 11, color: '#666' }
+                }],
+                xaxis: {
+                    title: 'Factor',
+                    tickangle: -45,
+                    tickfont: { size: 9 }
+                },
+                yaxis: {
+                    title: 'Factor',
+                    tickfont: { size: 9 }
+                },
+                template: 'plotly_white',
+                width: Math.max(800, actualTopK * 15),  // Scale width based on number of factors
+                height: Math.max(600, actualTopK * 15),  // Scale height based on number of factors
+                margin: { l: 120, r: 50, t: 100, b: 150 }  // Extra margin for labels
+            };
         
-        Plotly.newPlot('correlation-matrix-chart', [trace], {
-            title: 'Factor Correlation Matrix',
-            template: 'plotly_white',
-            width: 800,
-            height: 600
-        });
+            Plotly.newPlot('correlation-matrix-chart', [trace], layout);
         } catch (error) {
             console.error('Correlation matrix failed to load:', error);
             document.getElementById('correlation-matrix-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
