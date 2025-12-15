@@ -78,7 +78,7 @@
                     <i class="fas fa-info-circle me-1"></i>
                     Rolling statistics begin once 60 trading days of data are available.
                 </p>
-                <div id="rolling-ic-chart" class="chart-container"></div>
+                <div id="rolling-ic-chart" class="chart-container" style="height: 450px; width: 100%;"></div>
             </div>
         </div>
 
@@ -266,6 +266,16 @@
             loadingEl.style.display = 'none';
             mainContentEl.style.display = 'block';
             console.log('Hide loading, show main content');
+            
+            // Add window resize listener for Rolling IC chart
+            const rollingIcChart = document.getElementById('rolling-ic-chart');
+            if (rollingIcChart) {
+                window.addEventListener('resize', () => {
+                    if (rollingIcChart.data && rollingIcChart.data.length > 0) {
+                        Plotly.Plots.resize(rollingIcChart);
+                    }
+                });
+            }
         } catch (error) {
             console.error('Failed to load diagnostic data:', error);
             console.error('Error stack:', error.stack);
@@ -416,17 +426,43 @@
             };
             
             const chartEl = document.getElementById('rolling-ic-chart');
-            if (chartEl) {
-                Plotly.newPlot('rolling-ic-chart', [trace_lower, trace_upper, trace], {
+            if (!chartEl) {
+                console.warn('[Rolling IC] Chart element does not exist');
+                return;
+            }
+            
+            // Check if chart already exists (use Plotly.react for updates)
+            const chartExists = chartEl.data && chartEl.data.length > 0;
+            const plotFn = chartExists ? Plotly.react : Plotly.newPlot;
+            
+            // Delay initial render until layout is stable
+            const renderChart = () => {
+                plotFn('rolling-ic-chart', [trace_lower, trace_upper, trace], {
                     title: `Rolling IC (60D) - ${data.factor || selectedRollingFactor}`,
                     xaxis: { title: 'Date' },
                     yaxis: { title: 'IC Value' },
                     hovermode: 'x unified',
-                    template: 'plotly_white'
+                    template: 'plotly_white',
+                    height: 450
+                }).then(() => {
+                    // Force resize after render to ensure proper dimensions
+                    Plotly.Plots.resize(chartEl);
+                    console.log('[Rolling IC] Chart rendered and resized');
+                }).catch(error => {
+                    console.error('[Rolling IC] Plotly render error:', error);
                 });
-                console.log('[Rolling IC] Chart rendered');
+            };
+            
+            if (chartExists) {
+                // For factor changes, render immediately
+                renderChart();
             } else {
-                console.warn('[Rolling IC] Chart element does not exist');
+                // For initial render, wait for layout to be stable
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        renderChart();
+                    }, 0);
+                });
             }
         } catch (error) {
             console.error('[Rolling IC] Failed to load:', error);
