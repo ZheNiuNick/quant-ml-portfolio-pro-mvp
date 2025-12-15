@@ -139,7 +139,7 @@
         </div>
 
         <!-- 4. Factor Correlation Matrix -->
-        <div class="card diagnostic-card">
+        <section id="factor-correlation-section" class="card diagnostic-card">
             <div class="card-header bg-dark text-white">
                 <h5 class="mb-0"><i class="fas fa-th me-2"></i>Factor Correlation Matrix</h5>
             </div>
@@ -153,12 +153,17 @@
                     </select>
                     <small class="form-text text-muted">Using Pearson correlation method</small>
                 </div>
-                <div id="correlation-matrix-chart" class="chart-container" style="height: 600px;"></div>
+                <div id="factor-correlation-plot-wrapper" style="position: relative; width: 100%; min-height: 700px; overflow: visible;">
+                    <div id="correlation-matrix-chart" class="chart-container" style="position: relative; width: 100%;"></div>
+                </div>
             </div>
-        </div>
+        </section>
+        
+        <!-- Structural spacer to prevent overlap -->
+        <div class="section-spacer" style="display: block; height: 64px; width: 100%;"></div>
 
         <!-- 6. Multi-Factor Risk Exposure (Barra-style) -->
-        <div class="card diagnostic-card" style="margin-top: 4rem;">
+        <div class="card diagnostic-card">
             <div class="card-header bg-danger text-white">
                 <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Multi-Factor Risk Exposure (Barra-style)</h5>
             </div>
@@ -1111,7 +1116,27 @@
                 autosize: false
             };
         
-            Plotly.newPlot('correlation-matrix-chart', [trace], layout);
+            Plotly.newPlot('correlation-matrix-chart', [trace], layout).then(() => {
+                // Explicitly trigger layout reflow after Plotly renders
+                // This ensures the chart height is committed to document flow
+                requestAnimationFrame(() => {
+                    // Force Plotly to recalculate and commit dimensions
+                    Plotly.Plots.resize(document.getElementById('correlation-matrix-chart'));
+                    
+                    // Double-check: ensure wrapper has proper height
+                    const wrapper = document.getElementById('factor-correlation-plot-wrapper');
+                    const chart = document.getElementById('correlation-matrix-chart');
+                    if (wrapper && chart) {
+                        const chartHeight = chart.offsetHeight || chart.clientHeight;
+                        if (chartHeight > 0) {
+                            wrapper.style.minHeight = Math.max(700, chartHeight + 50) + 'px';
+                        }
+                    }
+                });
+            }).catch(error => {
+                console.error('Plotly plot error:', error);
+                document.getElementById('correlation-matrix-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
+            });
         } catch (error) {
             console.error('Correlation matrix failed to load:', error);
             document.getElementById('correlation-matrix-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
