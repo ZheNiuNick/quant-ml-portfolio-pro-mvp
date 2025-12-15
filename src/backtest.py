@@ -27,7 +27,7 @@ def load_settings(path = SETTINGS_FILE) -> Dict:
     """加载配置文件，支持绝对路径和相对路径"""
     if isinstance(path, str):
         path = get_path(path) if not os.path.isabs(path) else Path(path)
-    else:
+        else:
         path = get_path(str(path)) if not path.is_absolute() else path
     
     with open(path, "r") as f:
@@ -147,6 +147,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run portfolio backtest")
     parser.add_argument("--config", type=str, default=None, help="Path to config file")
     args = parser.parse_args()
-
+    
     cfg = load_settings(args.config) if args.config else load_settings()
     run_backtest(cfg)

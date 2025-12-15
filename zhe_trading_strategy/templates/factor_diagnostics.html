@@ -155,8 +155,8 @@
                 </div>
                 <div id="factor-correlation-plot-wrapper" style="position: relative; width: 100%; min-height: 700px; overflow: visible;">
                     <div id="correlation-matrix-chart" class="chart-container" style="position: relative; width: 100%;"></div>
-                </div>
             </div>
+        </div>
         </section>
         
         <!-- Structural spacer to prevent overlap -->
@@ -1102,13 +1102,13 @@
             const actualTopK = data.top_k || data.factors.length;
             
             // Create heatmap trace
-            const trace = {
-                z: data.correlation_matrix,
-                x: data.factors,
-                y: data.factors,
-                type: 'heatmap',
-                colorscale: 'RdBu',
-                zmid: 0,
+        const trace = {
+            z: data.correlation_matrix,
+            x: data.factors,
+            y: data.factors,
+            type: 'heatmap',
+            colorscale: 'RdBu',
+            zmid: 0,
                 zmin: -1,
                 zmax: 1,
                 hovertemplate: 'Factor X: %{x}<br>Factor Y: %{y}<br>Correlation: %{z:.3f}<extra></extra>'
@@ -1140,7 +1140,7 @@
                     title: 'Factor',
                     tickfont: { size: 9 }
                 },
-                template: 'plotly_white',
+            template: 'plotly_white',
                 // Limit chart size to prevent blocking content below
                 width: Math.min(1200, Math.max(800, actualTopK * 12)),  // Max width 1200px
                 height: Math.min(900, Math.max(600, actualTopK * 12)),  // Max height 900px
@@ -1169,7 +1169,7 @@
             }).catch(error => {
                 console.error('Plotly plot error:', error);
                 document.getElementById('correlation-matrix-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
-            });
+        });
         } catch (error) {
             console.error('Correlation matrix failed to load:', error);
             document.getElementById('correlation-matrix-chart').innerHTML = '<p class="text-danger text-center py-5">Failed to load</p>';
