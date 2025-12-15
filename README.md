@@ -511,6 +511,7 @@ IBKR_CONFIG = {
 ### Factor Engine
 
 ```python
+# imports
 from src.factor_engine import read_prices, forward_return, daily_rank_ic
 from src.factor_engine import load_settings as load_factor_settings
 
