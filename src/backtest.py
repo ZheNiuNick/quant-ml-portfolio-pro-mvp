@@ -26,9 +26,14 @@ SETTINGS = SETTINGS_FILE
 def load_settings(path = SETTINGS_FILE) -> Dict:
     """加载配置文件，支持绝对路径和相对路径"""
     if isinstance(path, str):
-        path = get_path(path) if not os.path.isabs(path) else Path(path)
+        if not os.path.isabs(path):
+            path = get_path(path)
         else:
-        path = get_path(str(path)) if not path.is_absolute() else path
+            path = Path(path)
+    elif isinstance(path, Path):
+        if not path.is_absolute():
+            path = get_path(str(path))
+        # else: path is already absolute, no change needed
     
     with open(path, "r") as f:
         return yaml.safe_load(f)
