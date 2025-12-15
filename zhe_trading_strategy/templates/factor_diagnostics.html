@@ -1103,9 +1103,12 @@
                     tickfont: { size: 9 }
                 },
                 template: 'plotly_white',
-                width: Math.max(800, actualTopK * 15),  // Scale width based on number of factors
-                height: Math.max(600, actualTopK * 15),  // Scale height based on number of factors
-                margin: { l: 120, r: 50, t: 100, b: 150 }  // Extra margin for labels
+                // Limit chart size to prevent blocking content below
+                width: Math.min(1200, Math.max(800, actualTopK * 12)),  // Max width 1200px
+                height: Math.min(900, Math.max(600, actualTopK * 12)),  // Max height 900px
+                margin: { l: 120, r: 50, t: 100, b: 150 },  // Extra margin for labels
+                // Add scrollbar for large matrices
+                autosize: false
             };
         
             Plotly.newPlot('correlation-matrix-chart', [trace], layout);

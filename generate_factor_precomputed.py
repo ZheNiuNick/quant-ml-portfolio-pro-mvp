@@ -232,8 +232,43 @@ def generate_correlation_matrix():
         if len(recent_factors) == 0:
             recent_factors = factor_store
         
-        # 选择部分因子（限制为100个，以支持 Top 100 选项）
-        factors = list(recent_factors.columns)[:100]
+        # 按ICIR排序选择Top 100因子（而不是简单取前100个）
+        # 加载IC/ICIR数据来排序
+        ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
+        if ic_store_path.exists():
+            print(f"📊 读取IC/ICIR数据用于排序...")
+            ic_data = pd.read_parquet(ic_store_path)
+            if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
+                ic_data["date"] = pd.to_datetime(ic_data["date"])
+            
+            # 计算每个因子的ICIR统计
+            factor_stats = ic_data.groupby("factor").agg({
+                "ic": ["mean", "std"]
+            }).reset_index()
+            factor_stats.columns = ["factor", "ic_mean", "ic_std"]
+            
+            # 计算ICIR (IC_mean / IC_std)，fallback到|IC_mean|
+            factor_stats["icir"] = factor_stats.apply(
+                lambda row: row["ic_mean"] / row["ic_std"] if row["ic_std"] > 1e-8 else np.nan,
+                axis=1
+            )
+            factor_stats["abs_icir"] = factor_stats["icir"].abs().fillna(factor_stats["ic_mean"].abs())
+            
+            # 按|ICIR|降序排序，选择Top 100
+            factor_stats_sorted = factor_stats.sort_values("abs_icir", ascending=False)
+            top_factors = factor_stats_sorted["factor"].head(100).tolist()
+            
+            # 只保留在recent_factors中存在的因子
+            available_factors = [f for f in top_factors if f in recent_factors.columns]
+            if len(available_factors) < 100:
+                print(f"⚠️  警告: 只有 {len(available_factors)} 个Top因子在相关性数据中")
+            factors = available_factors[:100]
+            print(f"📊 按ICIR排序选择Top {len(factors)}因子进行相关性计算")
+        else:
+            # Fallback: 如果没有IC数据，使用所有因子（但限制在相关性计算范围内）
+            print(f"⚠️  IC数据不存在，使用所有因子（最多100个）")
+            factors = list(recent_factors.columns)[:100]
+        
         factor_subset = recent_factors[factors]
         
         # 计算相关性矩阵（正确的方法：直接对所有数据进行相关性计算）
