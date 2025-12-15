@@ -67,7 +67,7 @@
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Rolling IC (60D) - Single Factor Analysis</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body" style="min-height: 520px;">
                 <div class="mb-3">
                     <label for="rolling-factor-select" class="form-label">Select Factor:</label>
                     <select id="rolling-factor-select" class="form-select" onchange="loadRollingMetrics()">
@@ -436,7 +436,7 @@
                                 (chartEl._fullLayout !== undefined);
             const plotFn = chartExists ? Plotly.react : Plotly.newPlot;
             
-            // Delay initial render until layout is stable
+            // Render chart (parent container has min-height, so one delayed render is sufficient)
             const renderChart = () => {
                 plotFn('rolling-ic-chart', [trace_lower, trace_upper, trace], {
                     title: `Rolling IC (60D) - ${data.factor || selectedRollingFactor}`,
@@ -458,12 +458,8 @@
                 // For factor changes, render immediately
                 renderChart();
             } else {
-                // For initial render, wait for layout to be stable
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        renderChart();
-                    }, 0);
-                });
+                // For initial render, single delayed render is sufficient (parent has min-height)
+                setTimeout(renderChart, 0);
             }
         } catch (error) {
             console.error('[Rolling IC] Failed to load:', error);
