@@ -541,7 +541,9 @@ if __name__ == "__main__":
     if generate_correlation_matrix():
         success_count += 1
     
-    if generate_risk_exposure():
+    # Use proper Barra-style risk model instead of old generate_risk_exposure()
+    from generate_barra_risk_exposure import generate_barra_risk_exposure
+    if generate_barra_risk_exposure():
         success_count += 1
     
     print("\n" + "=" * 60)

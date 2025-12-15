@@ -497,7 +497,18 @@ def generate_barra_risk_exposure():
                         portfolio_exposure_vector = np.array([portfolio_exposures[f] for f in common_factors])
                         
                         # Compute portfolio variance: b^T Σ_f b
+                        # CRITICAL: b is portfolio exposures to STYLE factors, Σ_f is STYLE factor return covariance
                         factor_variance = portfolio_exposure_vector @ factor_cov_subset.values @ portfolio_exposure_vector
+                        
+                        # VALIDATION: Ensure factor_covariance is non-singular (add small ridge if needed)
+                        if np.linalg.cond(factor_cov_subset.values) > 1e12:
+                            warnings.warn(f"[{date_obj}] Factor covariance matrix is near-singular (condition number > 1e12). "
+                                        f"Adding ridge regularization.")
+                            # Add small ridge: Σ_f = Σ_f + λI where λ = 1e-6 * trace(Σ_f) / n
+                            ridge_lambda = 1e-6 * np.trace(factor_cov_subset.values) / len(factor_cov_subset)
+                            factor_cov_subset = factor_cov_subset + np.eye(len(factor_cov_subset)) * ridge_lambda
+                            # Recompute with regularized covariance
+                            factor_variance = portfolio_exposure_vector @ factor_cov_subset.values @ portfolio_exposure_vector
                         
                         # Compute specific risk variance: σ²_specific = Σ_i (w_i² × σ²_i)
                         # For portfolio, we aggregate using portfolio weights
@@ -521,15 +532,17 @@ def generate_barra_risk_exposure():
                         total_portfolio_variance = factor_variance + portfolio_specific_variance
                         
                         if total_portfolio_variance > 1e-10:
-                            # Compute risk contributions: RC_k = b_k × (Σ_f b)_k
+                            # Compute risk contributions: RC_k = (b_k × (Σ_f b)_k) / (b^T Σ_f b + σ²_specific)
+                            # CRITICAL: RC_k = (b_k × (Σ_f @ b)_k) / total_portfolio_variance
                             # (Σ_f b) is the marginal contribution vector
                             marginal_contributions = factor_cov_subset.values @ portfolio_exposure_vector
                             
-                            # Risk contribution for each factor: RC_k = b_k × (Σ_f b)_k
+                            # Risk contribution for each factor: RC_k = b_k × (Σ_f b)_k / σ²_total
                             # Note: RC_k can be negative if exposure and marginal contribution have opposite signs
                             # This indicates the factor is reducing portfolio risk (hedging effect)
                             # However, the absolute value |RC_k| represents the magnitude of risk impact
                             for idx, factor_name in enumerate(common_factors):
+                                # RC_k = (b_k × (Σ_f @ b)_k) / σ²_total
                                 rc_k = portfolio_exposure_vector[idx] * marginal_contributions[idx]
                                 risk_contributions[factor_name] = float((rc_k / total_portfolio_variance) * 100)
                                 
@@ -545,8 +558,9 @@ def generate_barra_risk_exposure():
                             # Validate: Risk contributions should sum to 100% (approximately)
                             # Note: Individual contributions can be negative if a factor reduces portfolio risk
                             total_rc = sum(risk_contributions.values()) + specific_risk_contribution
-                            if abs(total_rc - 100.0) > 0.5:  # Allow 0.5% tolerance for numerical errors
-                                warnings.warn(f"[{date_obj}] Risk contributions sum to {total_rc:.2f}% instead of 100%")
+                            if abs(total_rc - 100.0) > 1e-3:  # Strict tolerance: 0.001%
+                                raise ValueError(f"CRITICAL ERROR [{date_obj}]: Risk contributions sum to {total_rc:.6f}% instead of 100% "
+                                               f"(tolerance: 0.001%). This violates Barra risk decomposition.")
                             
                             # Additional validation: verify total variance calculation
                             computed_total_var = sum([rc / 100.0 * total_portfolio_variance for rc in risk_contributions.values()]) + \
@@ -562,9 +576,12 @@ def generate_barra_risk_exposure():
                     for style_name in style_factors_ortho.columns:
                         risk_contributions[style_name] = 0.0
                 
-                # REGRESSION GUARD: Ensure we only save style factor names, not raw factor names
+                # CRITICAL VALIDATION: Ensure we only save style factor names, not raw factor names
                 # Valid style factors are the keys in style_factors_ortho.columns (bucket names)
                 valid_style_factor_names = set(style_factors_ortho.columns)
+                
+                # Canonical Barra style names (enforce strict separation)
+                canonical_style_names = {'Price/Level', 'Trend', 'Momentum', 'Volatility', 'Liquidity', 'Quality/Stability', 'Custom'}
                 
                 # Filter risk_contributions to only include style factors
                 filtered_risk_contributions = {
@@ -572,16 +589,29 @@ def generate_barra_risk_exposure():
                     if name in valid_style_factor_names
                 }
                 
-                # Warn if any raw factors were found
+                # ASSERTION 1: All style factor names must be in canonical list
+                for style_name in filtered_risk_contributions.keys():
+                    if style_name not in canonical_style_names:
+                        raise ValueError(f"CRITICAL ERROR: Style factor '{style_name}' is not in canonical Barra style list: {canonical_style_names}")
+                
+                # ASSERTION 2: No raw factors should appear
                 raw_factor_patterns = ['Alpha', 'AD', 'OBV', 'ADOSC', 'BB_', 'SMA_', 'EMA_', 'WMA_', 
                                      'DEMA_', 'RSI_', 'CCI_', 'STOCH', 'WILLR_', 'AROON', 'MACD',
-                                     'MOM_', 'ROC_', 'MFI_', 'ATR_', 'NATR_', 'BOP', 'CUSTOM_']
+                                     'MOM_', 'ROC_', 'MFI_', 'ATR_', 'NATR_', 'BOP', 'CUSTOM_', 
+                                     'WCLPRICE', 'VWAP', 'DX_14', 'TYPPRICE', 'MEDPRICE', 'AVGPRICE']
                 for factor_name in risk_contributions.keys():
                     if factor_name not in valid_style_factor_names:
                         is_raw = any(pattern in factor_name for pattern in raw_factor_patterns)
                         if is_raw:
-                            warnings.warn(f"[REGRESSION GUARD] Raw factor '{factor_name}' detected in risk_contributions! "
-                                        f"Only style factors should be present. Valid style factors: {valid_style_factor_names}")
+                            raise ValueError(f"CRITICAL ERROR: Raw factor '{factor_name}' detected in risk_contributions! "
+                                           f"Only style factors should be present. Valid style factors: {valid_style_factor_names}")
+                
+                # ASSERTION 3: Risk contributions must sum to ~100%
+                total_rc = sum(filtered_risk_contributions.values()) + specific_risk_contribution
+                if abs(total_rc - 100.0) > 1e-3:
+                    raise ValueError(f"CRITICAL ERROR: Risk contributions sum to {total_rc:.6f}% instead of 100% "
+                                   f"(tolerance: 0.001%). Factor RC: {sum(filtered_risk_contributions.values()):.6f}%, "
+                                   f"Specific RC: {specific_risk_contribution:.6f}%")
                 
                 # Sort by risk contribution
                 sorted_styles = sorted(filtered_risk_contributions.items(), key=lambda x: x[1], reverse=True)
