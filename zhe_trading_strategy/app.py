@@ -1266,8 +1266,18 @@ def factor_clusters():
 
 @app.route('/api/factor-diagnostics/correlation')
 def factor_correlation():
-    """因子相关性矩阵 - 使用预计算的 JSON 文件"""
+    """因子相关性矩阵 - 支持 Top-K 因子选择（按 |ICIR| 排序）"""
     method = request.args.get('method', 'pearson')
+    top_k = request.args.get('top_k', '50', type=int)
+    
+    # Validate top_k parameter
+    allowed_top_k = {20, 50, 100}
+    if top_k not in allowed_top_k:
+        return jsonify({
+            "error": f"Invalid top_k={top_k}. Allowed values: {sorted(allowed_top_k)}",
+            "factors": [],
+            "correlation_matrix": []
+        }), 400
     
     try:
         # 读取预计算的 JSON 文件
@@ -1292,10 +1302,90 @@ def factor_correlation():
                 "correlation_matrix": []
             }), 200
         
+        all_factors = data["factors"]
+        all_corr_matrix = np.array(data["correlation_matrix"])
+        
+        # If top_k is None or >= all factors, return all factors
+        if top_k >= len(all_factors):
+            return jsonify({
+                "error": None,
+                "factors": all_factors,
+                "correlation_matrix": data["correlation_matrix"],
+                "top_k": len(all_factors),
+                "method": method
+            })
+        
+        # Load IC/ICIR data to rank factors by |ICIR|
+        ic_store_path = DATA_FACTORS_DIR / "factor_ic_ir.parquet"
+        
+        if not ic_store_path.exists():
+            # Fallback: use first top_k factors if IC data not available
+            print(f"[WARN] IC data not found, using first {top_k} factors")
+            selected_factors = all_factors[:top_k]
+            factor_indices = [all_factors.index(f) for f in selected_factors]
+            selected_corr_matrix = all_corr_matrix[np.ix_(factor_indices, factor_indices)].tolist()
+            
+            return jsonify({
+                "error": None,
+                "factors": selected_factors,
+                "correlation_matrix": selected_corr_matrix,
+                "top_k": top_k,
+                "method": method,
+                "warning": "IC data not available, factors selected by order"
+            })
+        
+        # Load IC data and compute ICIR for ranking
+        ic_data = pd.read_parquet(ic_store_path)
+        if not pd.api.types.is_datetime64_any_dtype(ic_data["date"]):
+            ic_data["date"] = pd.to_datetime(ic_data["date"])
+        
+        # Compute factor statistics (ICIR for ranking)
+        factor_stats = ic_data.groupby("factor").agg({
+            "ic": ["mean", "std"]
+        }).reset_index()
+        factor_stats.columns = ["factor", "ic_mean", "ic_std"]
+        
+        # Compute ICIR (IC_mean / IC_std), fallback to |IC_mean| if ICIR unavailable
+        factor_stats["icir"] = factor_stats.apply(
+            lambda row: row["ic_mean"] / row["ic_std"] if row["ic_std"] > 1e-8 else np.nan,
+            axis=1
+        )
+        factor_stats["abs_icir"] = factor_stats["icir"].abs().fillna(factor_stats["ic_mean"].abs())
+        
+        # Create ranking dictionary: factor -> |ICIR| (or |IC_mean| as fallback)
+        factor_ranking = dict(zip(factor_stats["factor"], factor_stats["abs_icir"]))
+        
+        # Rank all factors in the correlation matrix by |ICIR|
+        factor_scores = []
+        for factor in all_factors:
+            score = factor_ranking.get(factor, 0.0)
+            factor_scores.append((factor, score))
+        
+        # Sort by score descending and take top_k
+        factor_scores_sorted = sorted(factor_scores, key=lambda x: x[1], reverse=True)
+        selected_factors = [f[0] for f in factor_scores_sorted[:top_k]]
+        
+        # Get indices of selected factors in the original matrix
+        factor_to_index = {f: i for i, f in enumerate(all_factors)}
+        selected_indices = [factor_to_index[f] for f in selected_factors if f in factor_to_index]
+        
+        # Extract submatrix for selected factors
+        if len(selected_indices) == top_k:
+            selected_corr_matrix = all_corr_matrix[np.ix_(selected_indices, selected_indices)].tolist()
+        else:
+            # Handle case where some factors are missing from correlation matrix
+            print(f"[WARN] Only {len(selected_indices)}/{top_k} factors found in correlation matrix")
+            selected_factors = [all_factors[i] for i in selected_indices]
+            selected_corr_matrix = all_corr_matrix[np.ix_(selected_indices, selected_indices)].tolist()
+        
+        print(f"[INFO] Selected top {len(selected_factors)} factors by |ICIR| for correlation matrix")
+        
         return jsonify({
             "error": None,
-            "factors": data["factors"],
-            "correlation_matrix": data["correlation_matrix"]
+            "factors": selected_factors,
+            "correlation_matrix": selected_corr_matrix,
+            "top_k": len(selected_factors),
+            "method": method
         })
     except Exception as e:
         import traceback
