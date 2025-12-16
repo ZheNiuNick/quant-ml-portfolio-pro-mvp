@@ -73,6 +73,60 @@ except ImportError:
 
 # 数据路径已在 path.py 中定义，无需重复定义
 
+# ============================================================================
+# INVALID TRADE EXCLUSION RULE (Single Source of Truth)
+# ============================================================================
+# Trades executed with incorrect capital-usage-ratio (0.9 instead of 0.05)
+# These trades must be excluded from all analytics, UI, and P&L calculations
+INVALID_TRADE_WINDOW = {
+    "start": "2025-12-15 10:54:00",  # EST time
+    "end":   "2025-12-15 16:07:00"   # EST time
+}
+
+def is_valid_trade(trade_time: str) -> bool:
+    """
+    Check if a trade is valid (not in the invalid trade window).
+    
+    Args:
+        trade_time: Trade time string in format "YYYY-MM-DD HH:MM:SS" (EST/EDT)
+    
+    Returns:
+        True if trade is valid (should be included), False if invalid (should be excluded)
+    """
+    if not trade_time or not isinstance(trade_time, str):
+        return True  # If time is missing, include it (don't filter out)
+    
+    # Extract date and time components
+    try:
+        if ' ' in trade_time:
+            date_str, time_str = trade_time.split(' ', 1)
+            if date_str == "2025-12-15":
+                # Parse time components
+                parts = time_str.split(':')
+                if len(parts) >= 3:
+                    hour = int(parts[0])
+                    minute = int(parts[1])
+                    second = int(parts[2])
+                    
+                    # Convert to total seconds for comparison
+                    trade_seconds = hour * 3600 + minute * 60 + second
+                    
+                    # Parse invalid window boundaries
+                    start_parts = INVALID_TRADE_WINDOW["start"].split(' ', 1)[1].split(':')
+                    end_parts = INVALID_TRADE_WINDOW["end"].split(' ', 1)[1].split(':')
+                    
+                    start_seconds = int(start_parts[0]) * 3600 + int(start_parts[1]) * 60 + int(start_parts[2])
+                    end_seconds = int(end_parts[0]) * 3600 + int(end_parts[1]) * 60 + int(end_parts[2])
+                    
+                    # Exclude if within invalid window
+                    if start_seconds <= trade_seconds <= end_seconds:
+                        return False
+    except (ValueError, IndexError, AttributeError):
+        # If parsing fails, include the trade (don't filter out)
+        pass
+    
+    return True  # Valid trade, include it
+
 
 def get_factor_store_path(factor_cfg=None):
     """
@@ -2360,6 +2414,9 @@ def ibkr_trades():
         
         trader.disconnect()
         
+        # Filter out invalid trades (from incorrect capital-usage-ratio execution)
+        trades = [t for t in trades if is_valid_trade(t.get("time", ""))]
+        
         # 按时间排序（最新的在前）
         trades.sort(key=lambda x: x.get("time", ""), reverse=True)
         
@@ -2418,6 +2475,9 @@ def blotter_trades():
                     if trade.get("time"):
                         trade["time"] = convert_to_ny_time(trade["time"], input_tz='UTC')
                 
+                # Filter out invalid trades (from incorrect capital-usage-ratio execution)
+                trades = [t for t in trades if is_valid_trade(t.get("time", ""))]
+                
                 # 应用筛选
                 if date_from:
                     trades = [t for t in trades if t.get("time", "") >= date_from]
@@ -2449,6 +2509,9 @@ def blotter_trades():
                 for trade in trades:
                     if trade.get("time"):
                         trade["time"] = convert_to_ny_time(trade["time"], input_tz='UTC')
+                
+                # Filter out invalid trades (from incorrect capital-usage-ratio execution)
+                trades = [t for t in trades if is_valid_trade(t.get("time", ""))]
                 
                 # 应用筛选
                 if date_from:

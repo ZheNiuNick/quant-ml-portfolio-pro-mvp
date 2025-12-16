@@ -35,6 +35,60 @@ from src.ibkr_live_trader import IBKRLiveTrader
 OUTPUT_DIR = OUTPUT_IBKR_DATA_DIR
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+# ============================================================================
+# INVALID TRADE EXCLUSION RULE (Single Source of Truth)
+# ============================================================================
+# Trades executed with incorrect capital-usage-ratio (0.9 instead of 0.05)
+# These trades must be excluded from all analytics, UI, and P&L calculations
+INVALID_TRADE_WINDOW = {
+    "start": "2025-12-15 10:54:00",  # EST time
+    "end":   "2025-12-15 16:07:00"   # EST time
+}
+
+def is_valid_trade(trade_time: str) -> bool:
+    """
+    Check if a trade is valid (not in the invalid trade window).
+    
+    Args:
+        trade_time: Trade time string in format "YYYY-MM-DD HH:MM:SS" (EST/EDT)
+    
+    Returns:
+        True if trade is valid (should be included), False if invalid (should be excluded)
+    """
+    if not trade_time or not isinstance(trade_time, str):
+        return True  # If time is missing, include it (don't filter out)
+    
+    # Extract date and time components
+    try:
+        if ' ' in trade_time:
+            date_str, time_str = trade_time.split(' ', 1)
+            if date_str == "2025-12-15":
+                # Parse time components
+                parts = time_str.split(':')
+                if len(parts) >= 3:
+                    hour = int(parts[0])
+                    minute = int(parts[1])
+                    second = int(parts[2])
+                    
+                    # Convert to total seconds for comparison
+                    trade_seconds = hour * 3600 + minute * 60 + second
+                    
+                    # Parse invalid window boundaries
+                    start_parts = INVALID_TRADE_WINDOW["start"].split(' ', 1)[1].split(':')
+                    end_parts = INVALID_TRADE_WINDOW["end"].split(' ', 1)[1].split(':')
+                    
+                    start_seconds = int(start_parts[0]) * 3600 + int(start_parts[1]) * 60 + int(start_parts[2])
+                    end_seconds = int(end_parts[0]) * 3600 + int(end_parts[1]) * 60 + int(end_parts[2])
+                    
+                    # Exclude if within invalid window
+                    if start_seconds <= trade_seconds <= end_seconds:
+                        return False
+    except (ValueError, IndexError, AttributeError):
+        # If parsing fails, include the trade (don't filter out)
+        pass
+    
+    return True  # Valid trade, include it
+
 # IBKR 配置（从环境变量或默认值）
 import os
 IBKR_HOST = os.getenv('IBKR_HOST', '127.0.0.1')
@@ -92,7 +146,16 @@ def fetch_trades(trader):
         # 使用 IBKRLiveTrader 的内建交易收集器
         # 该方法会自动从 IBKR TWS 获取所有历史交易记录（不仅仅是当前 session）
         trades = trader.get_trades()
-        print(f"[OK] 获取到 {len(trades)} 条交易记录")
+        
+        # Filter out invalid trades (from incorrect capital-usage-ratio execution)
+        original_count = len(trades)
+        trades = [t for t in trades if is_valid_trade(t.get("time", ""))]
+        filtered_count = original_count - len(trades)
+        
+        if filtered_count > 0:
+            print(f"[Info] Filtered out {filtered_count} invalid trades (from incorrect capital-usage-ratio)")
+        
+        print(f"[OK] 获取到 {len(trades)} 条有效交易记录")
         return trades
     except Exception as e:
         print(f"[Error] Failed to fetch trades: {e}")
@@ -392,6 +455,14 @@ def main():
         }, f, indent=2, ensure_ascii=False)
     print(f"\n[OK] 持仓数据已保存到: {positions_file}")
     
+    # Filter out invalid trades before saving (from incorrect capital-usage-ratio execution)
+    if trades:
+        original_count = len(trades)
+        trades = [t for t in trades if is_valid_trade(t.get("time", ""))]
+        filtered_count = original_count - len(trades)
+        if filtered_count > 0:
+            print(f"[Info] Filtered out {filtered_count} invalid trades before saving")
+    
     # 保存交易记录（累积模式：合并新旧交易记录）
     trades_file = OUTPUT_DIR / "trades.json"
     existing_trades = []
@@ -414,8 +485,19 @@ def main():
         except Exception as e:
             print(f"[Warn] 读取现有交易记录失败: {e}")
     
+    # Filter out invalid trades from existing trades (from incorrect capital-usage-ratio execution)
+    existing_trades_filtered = [t for t in existing_trades if is_valid_trade(t.get("time", ""))]
+    existing_filtered_count = len(existing_trades) - len(existing_trades_filtered)
+    if existing_filtered_count > 0:
+        print(f"[Info] Filtered out {existing_filtered_count} invalid trades from existing records")
+    
     # 合并新旧交易记录（去重）
-    all_trades = existing_trades.copy()
+    all_trades = existing_trades_filtered.copy()
+    existing_trade_ids = set()
+    for trade in all_trades:
+        trade_id = f"{trade.get('time', '')}_{trade.get('symbol', '')}_{trade.get('side', '')}_{trade.get('quantity', 0)}"
+        existing_trade_ids.add(trade_id)
+    
     new_trades_count = 0
     if trades:
         for trade in trades:
