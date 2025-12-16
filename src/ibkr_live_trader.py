@@ -612,8 +612,18 @@ class IBKRLiveTrader:
 
             price = prices.get(ticker)
             if not price or price <= 0:
-                logger.warning(f"[Skip] {ticker}: No valid price")
-                continue
+                logger.warning(f"[Skip] {ticker}: No valid price (price={price})")
+                # 尝试重新获取价格（可能是临时网络问题）
+                logger.info(f"[Retry] Attempting to get price for {ticker}...")
+                retry_price = self.get_realtime_price(ticker)
+                if retry_price and retry_price > 0:
+                    logger.info(f"[OK] Successfully got price for {ticker}: ${retry_price:.2f}")
+                    price = retry_price
+                    # 更新prices字典，以便后续使用
+                    prices[ticker] = retry_price
+                else:
+                    logger.error(f"[Error] Failed to get price for {ticker} after retry. Skipping this stock.")
+                    continue
 
             # 目标持仓价值
             target_value = total_capital * weight
@@ -1012,11 +1022,28 @@ class IBKRLiveTrader:
             
             # 获取实时价格（包括当前持仓中的股票，用于卖出订单）
             tickers = list(set(target_weights.index.tolist() + list(self.positions.keys())))
+            logger.info(f"[Info] Fetching prices for {len(tickers)} tickers (including {len(target_weights[target_weights > 0])} target stocks)")
             prices = self.get_realtime_prices(tickers)
 
             if not prices:
                 logger.error("[Error] No valid prices available. Aborting.")
                 return
+            
+            # 检查目标股票的价格获取情况
+            target_tickers_list = target_weights[target_weights > 0].index.tolist()
+            missing_prices = [t for t in target_tickers_list if t not in prices or not prices.get(t) or prices.get(t) <= 0]
+            if missing_prices:
+                logger.warning(f"[Warning] Missing prices for {len(missing_prices)} target stocks: {', '.join(missing_prices)}")
+                logger.info("[Info] Attempting to retry price fetching for missing stocks...")
+                for ticker in missing_prices:
+                    retry_price = self.get_realtime_price(ticker)
+                    if retry_price and retry_price > 0:
+                        logger.info(f"[OK] Successfully got price for {ticker}: ${retry_price:.2f}")
+                        prices[ticker] = retry_price
+                    else:
+                        logger.error(f"[Error] Failed to get price for {ticker} after retry")
+            else:
+                logger.info(f"[OK] Successfully got prices for all {len(target_tickers_list)} target stocks")
 
             # 显示当前持仓和目标持仓的对比
             logger.info(f"\n[Portfolio Comparison]")

@@ -68,6 +68,23 @@ def get_latest_factor_date(cfg) -> Optional[pd.Timestamp]:
 
 def get_price_date_range(cfg) -> Tuple[pd.Timestamp, pd.Timestamp]:
     """获取价格数据的日期范围"""
+    # 优先从 parquet 文件读取（通常比 DuckDB 更新）
+    parquet_path = get_path(cfg["paths"].get("prices_parquet", "data/processed/prices.parquet"))
+    if parquet_path.exists():
+        try:
+            prices = pd.read_parquet(parquet_path)
+            if not isinstance(prices.index, pd.MultiIndex):
+                if "date" in prices.columns and "ticker" in prices.columns:
+                    prices["date"] = pd.to_datetime(prices["date"])
+                    prices = prices.set_index(["date", "ticker"]).sort_index()
+            dates = prices.index.get_level_values(0).unique()
+            min_date = pd.to_datetime(dates.min())
+            max_date = pd.to_datetime(dates.max())
+            return min_date, max_date
+        except Exception as e:
+            print(f"[Warn] Failed to read from parquet: {e}, falling back to read_prices")
+    
+    # Fallback to read_prices (which tries parquet then DuckDB)
     prices = read_prices(cfg)
     if prices is None or len(prices) == 0:
         raise ValueError("无法读取价格数据")
@@ -307,9 +324,23 @@ def update_daily_factors(cfg, start_date: Optional[pd.Timestamp] = None,
     
     print(f"[Info] 更新日期范围: {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')}")
     
-    # 4. 读取价格数据
+    # 4. 读取价格数据（优先从 parquet 文件读取，通常比 DuckDB 更新）
     print("\n[Info] 读取价格数据...")
-    prices = read_prices(cfg)
+    parquet_path = get_path(cfg["paths"].get("prices_parquet", "data/processed/prices.parquet"))
+    if parquet_path.exists():
+        try:
+            prices = pd.read_parquet(parquet_path)
+            if not isinstance(prices.index, pd.MultiIndex):
+                if "date" in prices.columns and "ticker" in prices.columns:
+                    prices["date"] = pd.to_datetime(prices["date"])
+                    prices = prices.set_index(["date", "ticker"]).sort_index()
+            print(f"[Info] Loaded prices from parquet: {prices.shape}")
+        except Exception as e:
+            print(f"[Warn] Failed to load from parquet: {e}, falling back to read_prices")
+            prices = read_prices(cfg)
+    else:
+        prices = read_prices(cfg)
+    
     if prices is None or len(prices) == 0:
         raise ValueError("无法读取价格数据")
     
