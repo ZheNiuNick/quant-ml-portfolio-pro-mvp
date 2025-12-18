@@ -1,6 +1,96 @@
 {
-  "timestamp": "20251218_122407",
+  "timestamp": "20251218_123227",
   "trades": [
+    {
+      "time": "2025-12-18 17:28:44",
+      "symbol": "TMUS",
+      "side": "SELL",
+      "quantity": 48.0,
+      "price": 200.43,
+      "amount": 9620.64,
+      "commission": 1.007968,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:39",
+      "symbol": "ORCL",
+      "side": "SELL",
+      "quantity": 40.0,
+      "price": 179.59,
+      "amount": 7183.6,
+      "commission": 1.00664,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:39",
+      "symbol": "ORCL",
+      "side": "SELL",
+      "quantity": 13.0,
+      "price": 179.59,
+      "amount": 2334.67,
+      "commission": 0.002158,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:36",
+      "symbol": "NVDA",
+      "side": "SELL",
+      "quantity": 56.0,
+      "price": 174.28,
+      "amount": 9759.68,
+      "commission": 1.009296,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:30",
+      "symbol": "MSFT",
+      "side": "SELL",
+      "quantity": 20.0,
+      "price": 484.94,
+      "amount": 9698.8,
+      "commission": 1.00332,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:26",
+      "symbol": "GILD",
+      "side": "SELL",
+      "quantity": 1.0,
+      "price": 121.15,
+      "amount": 121.15,
+      "commission": 1.000166,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:24",
+      "symbol": "ANET",
+      "side": "SELL",
+      "quantity": 1.0,
+      "price": 124.21,
+      "amount": 124.21,
+      "commission": 1.000166,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:18",
+      "symbol": "AMGN",
+      "side": "SELL",
+      "quantity": 29.0,
+      "price": 324.62,
+      "amount": 9413.98,
+      "commission": 1.004814,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:28:13",
+      "symbol": "AMAT",
+      "side": "SELL",
+      "quantity": 38.0,
+      "price": 253.14,
+      "amount": 9619.32,
+      "commission": 1.006308,
+      "status": "FILLED"
+    },
     {
       "time": "2025-12-18 17:21:14",
       "symbol": "BSX",
@@ -1792,7 +1882,7 @@
       "status": "FILLED"
     }
   ],
-  "total_trades": 179,
+  "total_trades": 188,
   "new_trades_today": 9,
   "source": "ib_insync"
 }
