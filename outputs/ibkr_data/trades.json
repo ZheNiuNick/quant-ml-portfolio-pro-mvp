@@ -1,6 +1,96 @@
 {
-  "timestamp": "20251217_125444",
+  "timestamp": "20251218_122407",
   "trades": [
+    {
+      "time": "2025-12-18 17:21:14",
+      "symbol": "BSX",
+      "side": "SELL",
+      "quantity": 2.0,
+      "price": 96.08,
+      "amount": 192.16,
+      "commission": 1.000332,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:20:34",
+      "symbol": "MRK",
+      "side": "SELL",
+      "quantity": 2.0,
+      "price": 99.91,
+      "amount": 199.82,
+      "commission": 1.000332,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:17:24",
+      "symbol": "MDT",
+      "side": "BUY",
+      "quantity": 97.0,
+      "price": 98.49,
+      "amount": 9553.529999999999,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:17:20",
+      "symbol": "ETN",
+      "side": "BUY",
+      "quantity": 30.0,
+      "price": 314.99,
+      "amount": 9449.7,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:17:20",
+      "symbol": "MU",
+      "side": "BUY",
+      "quantity": 37.0,
+      "price": 251.99,
+      "amount": 9323.630000000001,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:17:20",
+      "symbol": "HCA",
+      "side": "BUY",
+      "quantity": 20.0,
+      "price": 470.1,
+      "amount": 9402.0,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:17:19",
+      "symbol": "GOOGL",
+      "side": "BUY",
+      "quantity": 31.0,
+      "price": 301.45,
+      "amount": 9344.949999999999,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:17:19",
+      "symbol": "NOW",
+      "side": "BUY",
+      "quantity": 3.0,
+      "price": 151.46,
+      "amount": 454.38,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
+    {
+      "time": "2025-12-18 17:17:18",
+      "symbol": "GOOG",
+      "side": "BUY",
+      "quantity": 31.0,
+      "price": 302.86,
+      "amount": 9388.66,
+      "commission": 1.0,
+      "status": "FILLED"
+    },
     {
       "time": "2025-12-17 17:53:47",
       "symbol": "AMGN",
@@ -1702,7 +1792,7 @@
       "status": "FILLED"
     }
   ],
-  "total_trades": 170,
-  "new_trades_today": 1,
+  "total_trades": 179,
+  "new_trades_today": 9,
   "source": "ib_insync"
 }
