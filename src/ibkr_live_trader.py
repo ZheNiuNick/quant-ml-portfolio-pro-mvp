@@ -623,7 +623,7 @@ class IBKRLiveTrader:
                     prices[ticker] = retry_price
                 else:
                     logger.error(f"[Error] Failed to get price for {ticker} after retry. Skipping this stock.")
-                    continue
+                continue
 
             # 目标持仓价值
             target_value = total_capital * weight

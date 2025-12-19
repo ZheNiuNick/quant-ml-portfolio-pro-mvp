@@ -1,168 +1,168 @@
 {
-  "timestamp": "20251218_123227",
+  "timestamp": "20251219_105459",
   "positions": [
-    {
-      "symbol": "BSX",
-      "shares": 100.0,
-      "avg_cost": 92.0747549,
-      "current_price": 96.05,
-      "market_value": 9605.0,
-      "unrealized_pnl": 397.5245099999995
-    },
-    {
-      "symbol": "PFE",
-      "shares": 381.0,
-      "avg_cost": 25.125,
-      "current_price": 25.02,
-      "market_value": 9532.619999999999,
-      "unrealized_pnl": -40.005000000000166
-    },
     {
       "symbol": "NFLX",
       "shares": 101.0,
       "avg_cost": 94.729802,
-      "current_price": 94.01,
-      "market_value": 9495.01,
-      "unrealized_pnl": -72.70000200000014
-    },
-    {
-      "symbol": "MRK",
-      "shares": 96.0,
-      "avg_cost": 97.8002041,
-      "current_price": 99.81,
-      "market_value": 9581.76,
-      "unrealized_pnl": 192.94040640000003
+      "current_price": 94.93,
+      "market_value": 9587.93,
+      "unrealized_pnl": 20.219998000000032
     },
     {
       "symbol": "NOW",
-      "shares": 63.0,
+      "shares": 62.0,
       "avg_cost": 154.7793651,
-      "current_price": 151.32,
-      "market_value": 9533.16,
-      "unrealized_pnl": -217.94000130000086
+      "current_price": 155.62,
+      "market_value": 9648.44,
+      "unrealized_pnl": 52.11936379999986
     },
     {
-      "symbol": "MDT",
-      "shares": 97.0,
-      "avg_cost": 98.5003093,
-      "current_price": 98.48,
-      "market_value": 9552.56,
-      "unrealized_pnl": -1.9700020999994052
+      "symbol": "ACN",
+      "shares": 35.0,
+      "avg_cost": 274.69857145,
+      "current_price": 274.62,
+      "market_value": 9611.7,
+      "unrealized_pnl": -2.7500007499989465
     },
     {
       "symbol": "APH",
-      "shares": 75.0,
+      "shares": 73.0,
       "avg_cost": 128.53933335,
-      "current_price": 128.35,
-      "market_value": 9626.25,
-      "unrealized_pnl": -14.200001249999872
+      "current_price": 132.06,
+      "market_value": 9640.380000000001,
+      "unrealized_pnl": 257.0086654500007
     },
     {
-      "symbol": "GILD",
-      "shares": 79.0,
-      "avg_cost": 118.68234625,
-      "current_price": 121.17,
-      "market_value": 9572.43,
-      "unrealized_pnl": 196.52464625000056
+      "symbol": "CAT",
+      "shares": 16.0,
+      "avg_cost": 576.6025,
+      "current_price": 576.8,
+      "market_value": 9228.8,
+      "unrealized_pnl": 3.1599999999998545
     },
     {
       "symbol": "T",
-      "shares": 393.0,
-      "avg_cost": 24.175,
-      "current_price": 24.33,
-      "market_value": 9561.689999999999,
-      "unrealized_pnl": 60.914999999999054
+      "shares": 397.0,
+      "avg_cost": 24.178199,
+      "current_price": 24.24,
+      "market_value": 9623.279999999999,
+      "unrealized_pnl": 24.534996999999645
     },
     {
       "symbol": "AMD",
-      "shares": 47.0,
+      "shares": 46.0,
       "avg_cost": 207.6248936,
-      "current_price": 200.79,
-      "market_value": 9437.13,
-      "unrealized_pnl": -321.23999920000074
+      "current_price": 210.17,
+      "market_value": 9667.82,
+      "unrealized_pnl": 117.0748943999991
+    },
+    {
+      "symbol": "SYK",
+      "shares": 27.0,
+      "avg_cost": 355.88703705,
+      "current_price": 356.23,
+      "market_value": 9618.210000000001,
+      "unrealized_pnl": 9.259999650000395
     },
     {
       "symbol": "HCA",
       "shares": 20.0,
       "avg_cost": 470.15,
-      "current_price": 470.31,
-      "market_value": 9406.2,
-      "unrealized_pnl": 3.2000000000005002
+      "current_price": 465.85,
+      "market_value": 9317.0,
+      "unrealized_pnl": -85.99999999999909
     },
     {
       "symbol": "UBER",
-      "shares": 119.0,
-      "avg_cost": 82.08340335,
-      "current_price": 79.71,
-      "market_value": 9485.49,
-      "unrealized_pnl": -282.43499865000047
+      "shares": 121.0,
+      "avg_cost": 82.0373967,
+      "current_price": 78.81,
+      "market_value": 9536.01,
+      "unrealized_pnl": -390.5150007
+    },
+    {
+      "symbol": "INTC",
+      "shares": 258.0,
+      "avg_cost": 37.075,
+      "current_price": 37.06,
+      "market_value": 9561.480000000001,
+      "unrealized_pnl": -3.8700000000001467
     },
     {
       "symbol": "AVGO",
       "shares": 29.0,
       "avg_cost": 324.67448275,
-      "current_price": 325.34,
-      "market_value": 9434.859999999999,
-      "unrealized_pnl": 19.300000249999812
+      "current_price": 336.37,
+      "market_value": 9754.73,
+      "unrealized_pnl": 339.17000025000067
+    },
+    {
+      "symbol": "LRCX",
+      "shares": 56.0,
+      "avg_cost": 170.49785715,
+      "current_price": 170.66,
+      "market_value": 9556.96,
+      "unrealized_pnl": 9.07999960000052
     },
     {
       "symbol": "PANW",
       "shares": 52.0,
       "avg_cost": 189.04384615,
-      "current_price": 183.22,
-      "market_value": 9527.44,
-      "unrealized_pnl": -302.83999980000044
-    },
-    {
-      "symbol": "MU",
-      "shares": 37.0,
-      "avg_cost": 252.01702705,
-      "current_price": 252.41,
-      "market_value": 9339.17,
-      "unrealized_pnl": 14.539999150000028
-    },
-    {
-      "symbol": "ANET",
-      "shares": 77.0,
-      "avg_cost": 125.61076925,
-      "current_price": 124.13,
-      "market_value": 9558.01,
-      "unrealized_pnl": -114.01923225000067
+      "current_price": 187.41,
+      "market_value": 9745.32,
+      "unrealized_pnl": -84.95999980000056
     },
     {
       "symbol": "ETN",
       "shares": 30.0,
       "avg_cost": 315.02333335,
-      "current_price": 315.13,
-      "market_value": 9453.9,
-      "unrealized_pnl": 3.199999500000672
+      "current_price": 317.17,
+      "market_value": 9515.1,
+      "unrealized_pnl": 64.39999950000129
     },
     {
-      "symbol": "CRWD",
-      "shares": 20.0,
-      "avg_cost": 476.77,
-      "current_price": 476.67,
-      "market_value": 9533.4,
-      "unrealized_pnl": -1.9999999999993179
+      "symbol": "TMO",
+      "shares": 16.0,
+      "avg_cost": 566.8025,
+      "current_price": 568.37,
+      "market_value": 9093.92,
+      "unrealized_pnl": 25.079999999999927
+    },
+    {
+      "symbol": "WELL",
+      "shares": 51.0,
+      "avg_cost": 187.09960785,
+      "current_price": 187.23,
+      "market_value": 9548.73,
+      "unrealized_pnl": 6.649999649998847
     },
     {
       "symbol": "GOOGL",
       "shares": 31.0,
       "avg_cost": 301.48225805,
-      "current_price": 301.7,
-      "market_value": 9352.699999999999,
-      "unrealized_pnl": 6.75000045000013
+      "current_price": 305.22,
+      "market_value": 9461.820000000002,
+      "unrealized_pnl": 115.87000045000133
     },
     {
       "symbol": "GOOG",
       "shares": 31.0,
       "avg_cost": 302.89225805,
-      "current_price": 303.09,
-      "market_value": 9395.789999999999,
-      "unrealized_pnl": 6.130000449998931
+      "current_price": 306.68,
+      "market_value": 9507.08,
+      "unrealized_pnl": 117.42000044999992
+    },
+    {
+      "symbol": "KLAC",
+      "shares": 7.0,
+      "avg_cost": 1257.45285715,
+      "current_price": 1256.22,
+      "market_value": 8793.54,
+      "unrealized_pnl": -8.630000049999808
     }
   ],
   "total_stocks": 20,
-  "total_value": 189984.57,
+  "total_value": 190018.25,
   "source": "ib_insync"
 }
