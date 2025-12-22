@@ -1,68 +1,37 @@
 {
-  "2025-11-06": {
-    "factors": [
-      "Volatility",
-      "Price/Level",
-      "Trend",
-      "Liquidity",
-      "Momentum"
-    ],
-    "exposures": [
-      0.1777,
-      0.039,
-      0.075,
-      0.0591,
-      -0.0496
-    ],
-    "risk_contributions": [
-      29.84,
-      2.21,
-      0.56,
-      -0.35,
-      -2.14
-    ],
-    "specific_risk_contribution": 69.88,
-    "specific_risk": 0.013,
-    "total_portfolio_variance": 0.00088,
-    "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
-      "Liquidity": 1.0,
-      "Custom": 1.0
-    }
-  },
   "2025-11-07": {
     "factors": [
-      "Volatility",
       "Trend",
-      "Momentum",
+      "Volatility",
+      "Price/Level",
       "Liquidity",
-      "Price/Level"
+      "Momentum",
+      "Custom"
     ],
     "exposures": [
-      0.1486,
-      0.2913,
-      0.0163,
-      0.0753,
-      -0.0472
+      0.2893,
+      0.1404,
+      -0.0472,
+      0.0297,
+      0.0715,
+      0.1167
     ],
     "risk_contributions": [
-      2.3,
-      0.13,
-      0.07,
-      -0.05,
-      -0.26
+      1.12,
+      1.1,
+      0.05,
+      0.03,
+      -0.27,
+      -0.4
     ],
-    "specific_risk_contribution": 97.81,
-    "specific_risk": 0.014,
-    "total_portfolio_variance": 0.004118,
+    "specific_risk_contribution": 98.37,
+    "specific_risk": 0.0134,
+    "total_portfolio_variance": 0.004618,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -71,32 +40,35 @@
     "factors": [
       "Volatility",
       "Momentum",
-      "Liquidity",
       "Trend",
-      "Price/Level"
+      "Liquidity",
+      "Price/Level",
+      "Custom"
     ],
     "exposures": [
-      0.2795,
-      0.0299,
-      0.0097,
-      -0.0174,
-      -0.0387
+      0.274,
+      0.0451,
+      0.0062,
+      -0.0406,
+      -0.0387,
+      0.0857
     ],
     "risk_contributions": [
-      71.44,
-      3.4,
-      -0.13,
-      -0.44,
-      -3.89
+      82.63,
+      5.47,
+      0.87,
+      -0.17,
+      -2.22,
+      -11.36
     ],
-    "specific_risk_contribution": 29.62,
+    "specific_risk_contribution": 24.77,
     "specific_risk": 0.0138,
-    "total_portfolio_variance": 0.000392,
+    "total_portfolio_variance": 0.000527,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -104,33 +76,36 @@
   "2025-11-11": {
     "factors": [
       "Volatility",
+      "Trend",
       "Momentum",
       "Liquidity",
-      "Trend",
-      "Price/Level"
+      "Price/Level",
+      "Custom"
     ],
     "exposures": [
-      0.2758,
-      0.0019,
-      0.0001,
-      0.0132,
-      -0.0393
+      0.2671,
+      0.0325,
+      0.0169,
+      -0.0585,
+      -0.0393,
+      0.0346
     ],
     "risk_contributions": [
-      23.61,
-      0.07,
-      -0.0,
-      -0.07,
-      -1.2
+      20.44,
+      1.02,
+      0.52,
+      0.05,
+      -0.57,
+      -1.06
     ],
-    "specific_risk_contribution": 77.59,
+    "specific_risk_contribution": 79.59,
     "specific_risk": 0.0171,
-    "total_portfolio_variance": 0.0016,
+    "total_portfolio_variance": 0.001513,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -141,64 +116,70 @@
       "Trend",
       "Momentum",
       "Liquidity",
+      "Custom",
       "Price/Level"
     ],
     "exposures": [
-      0.1318,
-      0.0592,
-      -0.0013,
-      0.0121,
+      0.1299,
+      0.0709,
+      0.0161,
+      0.021,
+      0.0077,
       -0.1271
     ],
     "risk_contributions": [
-      5.63,
-      0.27,
-      -0.02,
-      -0.04,
-      -1.57
+      8.67,
+      2.41,
+      0.37,
+      0.05,
+      -0.23,
+      -1.55
     ],
-    "specific_risk_contribution": 95.73,
-    "specific_risk": 0.0176,
-    "total_portfolio_variance": 0.000777,
+    "specific_risk_contribution": 90.29,
+    "specific_risk": 0.0174,
+    "total_portfolio_variance": 0.000803,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
   },
   "2025-11-13": {
     "factors": [
-      "Price/Level",
+      "Volatility",
       "Momentum",
-      "Liquidity",
       "Trend",
-      "Volatility"
+      "Liquidity",
+      "Price/Level",
+      "Custom"
     ],
     "exposures": [
-      -0.181,
-      -0.1356,
-      0.0935,
-      0.0204,
-      0.0768
+      0.0826,
+      -0.128,
+      0.0393,
+      0.1205,
+      -0.185,
+      -0.0189
     ],
     "risk_contributions": [
-      7.38,
-      6.66,
-      1.58,
-      0.69,
-      -5.06
+      3.22,
+      2.19,
+      1.55,
+      1.39,
+      0.93,
+      0.42
     ],
-    "specific_risk_contribution": 88.75,
+    "specific_risk_contribution": 90.3,
     "specific_risk": 0.0135,
-    "total_portfolio_variance": 0.000259,
+    "total_portfolio_variance": 0.000254,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -207,32 +188,35 @@
     "factors": [
       "Volatility",
       "Trend",
+      "Custom",
       "Liquidity",
       "Momentum",
       "Price/Level"
     ],
     "exposures": [
-      0.1368,
-      0.1411,
-      0.0461,
-      -0.0783,
+      0.1361,
+      0.1497,
+      -0.0218,
+      0.0369,
+      -0.06,
       -0.1174
     ],
     "risk_contributions": [
-      27.84,
-      13.56,
-      0.05,
-      -1.65,
-      -2.89
+      37.85,
+      23.86,
+      2.28,
+      0.45,
+      -3.29,
+      -5.07
     ],
-    "specific_risk_contribution": 63.08,
+    "specific_risk_contribution": 43.91,
     "specific_risk": 0.0138,
-    "total_portfolio_variance": 0.000161,
+    "total_portfolio_variance": 0.000215,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -243,30 +227,33 @@
       "Trend",
       "Momentum",
       "Liquidity",
-      "Price/Level"
+      "Price/Level",
+      "Custom"
     ],
     "exposures": [
-      0.2278,
-      0.223,
-      0.0034,
-      0.0498,
-      -0.0487
+      0.2191,
+      0.2288,
+      0.0446,
+      -0.0061,
+      -0.0498,
+      0.1004
     ],
     "risk_contributions": [
-      55.35,
-      10.46,
-      0.21,
-      -0.66,
-      -3.01
+      52.18,
+      26.86,
+      3.56,
+      -0.04,
+      -2.32,
+      -7.89
     ],
-    "specific_risk_contribution": 37.65,
-    "specific_risk": 0.0144,
-    "total_portfolio_variance": 0.000349,
+    "specific_risk_contribution": 27.64,
+    "specific_risk": 0.0145,
+    "total_portfolio_variance": 0.00039,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -274,33 +261,36 @@
   "2025-11-19": {
     "factors": [
       "Volatility",
-      "Price/Level",
       "Momentum",
+      "Price/Level",
+      "Liquidity",
       "Trend",
-      "Liquidity"
+      "Custom"
     ],
     "exposures": [
-      0.0835,
-      0.1182,
-      0.1115,
-      -0.0327,
-      0.0571
+      0.0931,
+      0.0889,
+      0.12,
+      0.0471,
+      -0.0739,
+      0.1577
     ],
     "risk_contributions": [
-      1.34,
-      0.77,
-      0.63,
-      0.04,
-      -0.1
+      0.71,
+      0.36,
+      0.35,
+      -0.01,
+      -0.16,
+      -0.2
     ],
-    "specific_risk_contribution": 97.32,
-    "specific_risk": 0.0179,
-    "total_portfolio_variance": 0.003137,
+    "specific_risk_contribution": 98.95,
+    "specific_risk": 0.0173,
+    "total_portfolio_variance": 0.002588,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -309,32 +299,35 @@
     "factors": [
       "Volatility",
       "Trend",
+      "Custom",
       "Momentum",
-      "Liquidity",
-      "Price/Level"
+      "Price/Level",
+      "Liquidity"
     ],
     "exposures": [
-      0.2408,
-      0.1941,
-      -0.0589,
-      -0.0777,
-      -0.0594
+      0.2362,
+      0.2005,
+      -0.0352,
+      -0.0351,
+      -0.0594,
+      -0.0862
     ],
     "risk_contributions": [
-      2.83,
-      0.61,
-      -0.01,
-      -0.06,
-      -0.14
+      2.31,
+      1.1,
+      0.05,
+      -0.05,
+      -0.1,
+      -0.13
     ],
-    "specific_risk_contribution": 96.76,
-    "specific_risk": 0.0346,
-    "total_portfolio_variance": 0.009592,
+    "specific_risk_contribution": 96.81,
+    "specific_risk": 0.0343,
+    "total_portfolio_variance": 0.009167,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -342,33 +335,33 @@
   "2025-11-28": {
     "factors": [
       "Volatility",
-      "Momentum",
       "Trend",
+      "Momentum",
       "Price/Level",
       "Liquidity"
     ],
     "exposures": [
-      0.0591,
-      -0.0993,
-      0.027,
+      0.0629,
+      0.0629,
+      -0.0848,
       0.0126,
-      -0.0345
+      -0.0301
     ],
     "risk_contributions": [
-      45.56,
-      22.16,
-      7.16,
-      2.14,
-      -1.48
+      40.13,
+      28.7,
+      11.29,
+      1.35,
+      -3.15
     ],
-    "specific_risk_contribution": 24.46,
+    "specific_risk_contribution": 21.68,
     "specific_risk": 0.0121,
-    "total_portfolio_variance": 2.9e-05,
+    "total_portfolio_variance": 3.3e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -376,33 +369,33 @@
   "2025-12-01": {
     "factors": [
       "Volatility",
-      "Momentum",
       "Trend",
+      "Momentum",
       "Price/Level",
       "Liquidity"
     ],
     "exposures": [
-      0.0624,
-      -0.0808,
-      0.0159,
+      0.0639,
+      0.0524,
+      -0.0694,
       0.0181,
-      -0.0336
+      -0.0412
     ],
     "risk_contributions": [
-      45.29,
-      13.62,
-      3.41,
-      2.89,
-      -0.64
+      39.7,
+      22.06,
+      6.17,
+      2.17,
+      -3.57
     ],
-    "specific_risk_contribution": 35.43,
-    "specific_risk": 0.0183,
-    "total_portfolio_variance": 3.1e-05,
+    "specific_risk_contribution": 33.47,
+    "specific_risk": 0.0182,
+    "total_portfolio_variance": 3.3e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -410,33 +403,33 @@
   "2025-12-02": {
     "factors": [
       "Volatility",
+      "Trend",
       "Price/Level",
       "Momentum",
-      "Trend",
       "Liquidity"
     ],
     "exposures": [
-      0.0671,
+      0.0701,
+      0.0424,
       0.0378,
-      -0.0552,
-      0.0175,
-      -0.0075
+      -0.0466,
+      -0.0145
     ],
     "risk_contributions": [
-      42.48,
-      6.13,
-      2.87,
-      2.26,
-      -0.04
+      38.18,
+      14.14,
+      4.33,
+      0.51,
+      -1.11
     ],
-    "specific_risk_contribution": 46.31,
+    "specific_risk_contribution": 43.94,
     "specific_risk": 0.018,
-    "total_portfolio_variance": 4.1e-05,
+    "total_portfolio_variance": 4.4e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -444,33 +437,33 @@
   "2025-12-03": {
     "factors": [
       "Volatility",
-      "Momentum",
       "Trend",
+      "Momentum",
       "Liquidity",
       "Price/Level"
     ],
     "exposures": [
-      0.0663,
-      -0.0735,
-      0.0379,
-      0.0071,
+      0.0672,
+      0.0496,
+      -0.0677,
+      0.0021,
       -0.0049
     ],
     "risk_contributions": [
-      28.87,
-      8.62,
-      6.24,
-      0.26,
-      -0.3
+      29.33,
+      14.74,
+      4.06,
+      0.18,
+      -0.26
     ],
-    "specific_risk_contribution": 56.3,
-    "specific_risk": 0.0147,
-    "total_portfolio_variance": 4.6e-05,
+    "specific_risk_contribution": 51.96,
+    "specific_risk": 0.0148,
+    "total_portfolio_variance": 5e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -478,33 +471,33 @@
   "2025-12-04": {
     "factors": [
       "Volatility",
+      "Trend",
       "Price/Level",
       "Momentum",
-      "Trend",
       "Liquidity"
     ],
     "exposures": [
-      0.0383,
+      0.0399,
+      0.0192,
       0.0292,
-      -0.0282,
-      0.0091,
-      -0.0
+      -0.0235,
+      -0.0029
     ],
     "risk_contributions": [
-      31.96,
-      6.69,
-      1.67,
-      1.52,
-      0.0
+      31.66,
+      8.99,
+      5.32,
+      -0.13,
+      -0.31
     ],
-    "specific_risk_contribution": 58.16,
+    "specific_risk_contribution": 54.48,
     "specific_risk": 0.016,
-    "total_portfolio_variance": 1.6e-05,
+    "total_portfolio_variance": 1.7e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -513,32 +506,32 @@
     "factors": [
       "Volatility",
       "Price/Level",
-      "Momentum",
       "Trend",
+      "Momentum",
       "Liquidity"
     ],
     "exposures": [
-      0.0362,
+      0.0376,
       0.0293,
-      -0.0251,
-      0.0012,
-      -0.0012
+      0.0104,
+      -0.0216,
+      -0.0036
     ],
     "risk_contributions": [
-      16.72,
-      3.99,
-      0.58,
-      0.09,
-      0.01
+      17.19,
+      3.3,
+      2.74,
+      -0.18,
+      -0.21
     ],
-    "specific_risk_contribution": 78.6,
+    "specific_risk_contribution": 77.16,
     "specific_risk": 0.0152,
-    "total_portfolio_variance": 2.5e-05,
+    "total_portfolio_variance": 2.6e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -552,27 +545,27 @@
       "Trend"
     ],
     "exposures": [
-      0.0354,
+      0.0363,
       0.0297,
-      -0.0276,
-      -0.0001,
-      -0.019
+      -0.0262,
+      -0.0019,
+      -0.0082
     ],
     "risk_contributions": [
-      40.22,
-      9.64,
-      1.15,
-      0.0,
-      -1.13
+      38.66,
+      9.09,
+      0.37,
+      -0.23,
+      -4.76
     ],
-    "specific_risk_contribution": 50.11,
+    "specific_risk_contribution": 56.87,
     "specific_risk": 0.0134,
-    "total_portfolio_variance": 9e-06,
+    "total_portfolio_variance": 8e-06,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -581,66 +574,66 @@
     "factors": [
       "Volatility",
       "Price/Level",
-      "Liquidity",
       "Momentum",
+      "Liquidity",
       "Trend"
     ],
     "exposures": [
-      0.0325,
+      0.0319,
       0.0299,
-      -0.0022,
-      -0.0264,
-      -0.0278
+      -0.0288,
+      -0.0031,
+      -0.0181
     ],
     "risk_contributions": [
-      13.08,
-      4.16,
-      0.06,
-      0.05,
-      -0.02
+      10.02,
+      3.36,
+      0.7,
+      -0.09,
+      -2.95
     ],
-    "specific_risk_contribution": 82.68,
-    "specific_risk": 0.0181,
-    "total_portfolio_variance": 2.2e-05,
+    "specific_risk_contribution": 88.96,
+    "specific_risk": 0.0182,
+    "total_portfolio_variance": 1.9e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
   },
   "2025-12-10": {
     "factors": [
-      "Momentum",
-      "Price/Level",
       "Trend",
+      "Momentum",
       "Volatility",
+      "Price/Level",
       "Liquidity"
     ],
     "exposures": [
-      -0.0353,
+      0.0245,
+      -0.0302,
+      0.0066,
       0.0241,
-      0.0157,
-      0.0061,
-      0.0019
+      0.0033
     ],
     "risk_contributions": [
-      16.3,
-      1.82,
-      1.51,
-      0.16,
-      0.01
+      6.17,
+      3.9,
+      2.02,
+      1.98,
+      0.18
     ],
-    "specific_risk_contribution": 80.18,
+    "specific_risk_contribution": 85.75,
     "specific_risk": 0.0168,
-    "total_portfolio_variance": 1.7e-05,
+    "total_portfolio_variance": 1.6e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -649,100 +642,100 @@
     "factors": [
       "Trend",
       "Volatility",
-      "Momentum",
       "Price/Level",
-      "Liquidity"
+      "Liquidity",
+      "Momentum"
     ],
     "exposures": [
-      0.0618,
-      0.0232,
-      -0.0189,
+      0.0646,
+      0.0265,
       0.0216,
-      0.0024
+      0.0025,
+      -0.0054
     ],
     "risk_contributions": [
-      51.63,
-      27.57,
-      11.99,
-      8.29,
-      0.51
+      57.26,
+      37.01,
+      5.43,
+      0.55,
+      -0.27
     ],
     "specific_risk_contribution": 0.0,
     "specific_risk": null,
-    "total_portfolio_variance": 6e-06,
+    "total_portfolio_variance": 1.2e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
   },
   "2025-12-15": {
     "factors": [
-      "Momentum",
       "Trend",
       "Volatility",
+      "Momentum",
       "Price/Level",
       "Liquidity"
     ],
     "exposures": [
-      -0.0413,
-      0.046,
-      0.0233,
+      0.0528,
+      0.0252,
+      -0.0317,
       -0.0037,
-      -0.0105
+      -0.0099
     ],
     "risk_contributions": [
-      27.18,
-      10.97,
-      8.37,
-      0.92,
-      -2.35
+      30.44,
+      19.9,
+      3.89,
+      -0.35,
+      -1.45
     ],
-    "specific_risk_contribution": 54.92,
+    "specific_risk_contribution": 47.58,
     "specific_risk": 0.0131,
-    "total_portfolio_variance": 1.3e-05,
+    "total_portfolio_variance": 1.5e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
   },
   "2025-12-16": {
     "factors": [
-      "Momentum",
       "Trend",
       "Volatility",
-      "Liquidity",
-      "Price/Level"
+      "Momentum",
+      "Price/Level",
+      "Liquidity"
     ],
     "exposures": [
-      -0.0397,
-      0.0435,
-      0.0279,
-      0.0093,
-      0.0107
+      0.0541,
+      0.028,
+      -0.028,
+      0.0107,
+      0.0058
     ],
     "risk_contributions": [
-      0.2,
-      0.11,
-      0.11,
+      0.36,
+      0.27,
       0.02,
-      -0.01
+      0.02,
+      0.01
     ],
-    "specific_risk_contribution": 99.58,
+    "specific_risk_contribution": 99.33,
     "specific_risk": 0.0387,
-    "total_portfolio_variance": 0.001518,
+    "total_portfolio_variance": 0.001526,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -756,27 +749,27 @@
       "Liquidity"
     ],
     "exposures": [
-      0.0663,
-      0.0246,
-      -0.0476,
+      0.0713,
+      0.0247,
+      -0.0411,
       0.0104,
-      -0.0113
+      -0.0103
     ],
     "risk_contributions": [
-      14.52,
-      8.53,
-      8.22,
-      2.82,
-      -1.28
+      20.27,
+      9.48,
+      2.8,
+      0.6,
+      -0.7
     ],
-    "specific_risk_contribution": 67.2,
+    "specific_risk_contribution": 67.54,
     "specific_risk": 0.0145,
     "total_portfolio_variance": 3.9e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }
@@ -790,27 +783,61 @@
       "Liquidity"
     ],
     "exposures": [
-      0.0632,
-      0.0299,
+      0.0682,
+      0.0295,
       0.0291,
-      -0.0374,
-      -0.0089
+      -0.031,
+      -0.0067
     ],
     "risk_contributions": [
-      33.04,
-      31.86,
-      31.6,
-      4.87,
-      -1.38
+      26.98,
+      17.16,
+      3.31,
+      1.4,
+      -0.6
+    ],
+    "specific_risk_contribution": 51.76,
+    "specific_risk": 0.019,
+    "total_portfolio_variance": 2.9e-05,
+    "pca_variance_explained": {
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
+      "Liquidity": 1.0,
+      "Custom": 1.0
+    }
+  },
+  "2025-12-19": {
+    "factors": [
+      "Trend",
+      "Volatility",
+      "Price/Level",
+      "Liquidity",
+      "Momentum"
+    ],
+    "exposures": [
+      0.0587,
+      0.0344,
+      0.0292,
+      0.0087,
+      -0.0265
+    ],
+    "risk_contributions": [
+      47.51,
+      42.67,
+      6.76,
+      1.8,
+      1.27
     ],
     "specific_risk_contribution": 0.0,
     "specific_risk": null,
-    "total_portfolio_variance": 2e-05,
+    "total_portfolio_variance": 1.5e-05,
     "pca_variance_explained": {
-      "Price/Level": 0.9975346700559378,
-      "Trend": 0.7268369184596659,
-      "Momentum": 0.6736179464322334,
-      "Volatility": 0.6852656873797498,
+      "Price/Level": 0.9981544752451785,
+      "Trend": 0.7268618493947645,
+      "Momentum": 0.6299911269602059,
+      "Volatility": 0.6948892995647866,
       "Liquidity": 1.0,
       "Custom": 1.0
     }

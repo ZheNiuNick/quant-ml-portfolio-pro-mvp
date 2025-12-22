@@ -99,6 +99,7 @@ class IBKRLiveTrader:
         self.price_offset = price_offset
         self.market_data_type = market_data_type.lower()
         self.market_data_type_code = {"real": 1, "delayed": 3, "delayed_frozen": 4}.get(self.market_data_type, 3)
+        self.order_times = {}  # 记录每个订单的下单时间
         self.orders: Dict[str, any] = {}  # ticker -> Trade
         self.positions: Dict[str, float] = {}  # ticker -> current_shares
         
@@ -854,6 +855,7 @@ class IBKRLiveTrader:
             # ib_insync 同步 API：直接调用 placeOrder（返回 Trade 对象）
             trade = self.ib.placeOrder(contract, order)
             self.orders[ticker] = trade
+            self.order_times[ticker] = time.time()  # 记录下单时间
             logger.info(f"[OK] Order placed for {ticker} (orderId={trade.order.orderId})")
 
             return trade
@@ -864,10 +866,18 @@ class IBKRLiveTrader:
             logger.error(f"[Error] Failed to place order for {ticker}: {e}")
             return None
 
-    def wait_for_orders(self, timeout: int = 300):
-        """等待所有订单成交或超时 - 同步版本"""
-        logger.info(f"Waiting for orders to fill (timeout={timeout}s)...")
+    def wait_for_orders(self, timeout: int = 300, limit_order_timeout: int = 300, prices: Optional[Dict[str, float]] = None):
+        """
+        等待所有订单成交或超时 - 同步版本
+        
+        Args:
+            timeout: 总等待超时时间（秒）
+            limit_order_timeout: 限价单超时时间（秒），超过后自动转为市价单
+            prices: 价格字典，用于转为市价单时获取当前价格
+        """
+        logger.info(f"Waiting for orders to fill (total timeout={timeout}s, limit order timeout={limit_order_timeout}s)...")
         start_time = time.time()
+        converted_to_market = set()  # 记录已经转为市价单的订单
         
         # 检查是否有PreSubmitted订单（非交易时间提交的订单）
         pre_submitted_orders = []
@@ -884,10 +894,65 @@ class IBKRLiveTrader:
 
         while (time.time() - start_time) < timeout:
             all_filled = True
+            current_time = time.time()
+            
             for ticker, trade in self.orders.items():
                 status = trade.orderStatus.status
                 filled = trade.orderStatus.filled
                 remaining = trade.orderStatus.remaining
+                
+                # 检查限价单是否超过5分钟未成交，如果是则转为市价单
+                if (ticker not in converted_to_market and 
+                    ticker not in pre_submitted_orders and
+                    ticker in self.order_times and
+                    isinstance(trade.order, LimitOrder) and
+                    status not in ["Filled", "Cancelled"]):
+                    
+                    order_age = current_time - self.order_times[ticker]
+                    if order_age >= limit_order_timeout:
+                        logger.warning(f"[Timeout] {ticker}: LIMIT order pending for {order_age:.0f}s (>={limit_order_timeout}s), converting to MARKET order")
+                        
+                        # 取消限价单
+                        try:
+                            self.ib.cancelOrder(trade.order)
+                            logger.info(f"[Cancel] {ticker}: Cancelled LIMIT order (orderId={trade.order.orderId})")
+                        except Exception as e:
+                            logger.warning(f"[Warning] {ticker}: Failed to cancel LIMIT order: {e}")
+                        
+                        # 获取当前价格
+                        if prices and ticker in prices:
+                            current_price = prices[ticker]
+                        else:
+                            # 尝试从合约获取最新价格
+                            try:
+                                contract = Stock(ticker, "SMART", "USD")
+                                self.ib.qualifyContracts(contract)
+                                ticker_data = self.ib.reqMktData(contract, "", False, False)
+                                self.ib.sleep(2)  # 等待价格数据
+                                current_price = ticker_data.last if ticker_data.last else ticker_data.close
+                                if not current_price or current_price <= 0:
+                                    logger.error(f"[Error] {ticker}: Cannot get current price for MARKET order")
+                                    continue
+                            except Exception as e:
+                                logger.error(f"[Error] {ticker}: Failed to get price for MARKET order: {e}")
+                                continue
+                        
+                        # 创建市价单
+                        try:
+                            contract = Stock(ticker, "SMART", "USD")
+                            self.ib.qualifyContracts(contract)
+                            market_order = MarketOrder(
+                                action=trade.order.action,
+                                totalQuantity=remaining if remaining > 0 else trade.order.totalQuantity,
+                            )
+                            new_trade = self.ib.placeOrder(contract, market_order)
+                            self.orders[ticker] = new_trade
+                            self.order_times[ticker] = time.time()  # 更新订单时间
+                            converted_to_market.add(ticker)
+                            logger.warning(f"[Market] {ticker}: Placed MARKET {market_order.action} order for {market_order.totalQuantity} shares")
+                        except Exception as e:
+                            logger.error(f"[Error] {ticker}: Failed to place MARKET order: {e}")
+                            continue
 
                 if status == "Filled":
                     logger.info(f"[Filled] {ticker}: {filled} shares filled")
@@ -955,8 +1020,8 @@ class IBKRLiveTrader:
             if price:
                 self.place_order(ticker, trade_shares, price)
 
-        # 4. 等待订单成交
-        self.wait_for_orders()
+        # 4. 等待订单成交（传入价格字典用于转为市价单）
+        self.wait_for_orders(limit_order_timeout=300, prices=prices)  # 5分钟 = 300秒
 
     def run(
         self,
