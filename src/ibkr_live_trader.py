@@ -306,15 +306,16 @@ class IBKRLiveTrader:
         except Exception:
             pass
     
-    def _on_exec_details(self, reqId, contract, execution):
+    def _on_exec_details(self, fill, execution):
         """执行详情事件回调：收集所有执行记录"""
         try:
-            if contract and contract.secType == "STK":
+            if fill and hasattr(fill, 'contract') and fill.contract and fill.contract.secType == "STK":
+                contract = fill.contract
                 # 存储执行记录（包含合约和执行信息）
                 exec_data = {
-                    "reqId": reqId,
                     "contract": contract,
                     "execution": execution,
+                    "fill": fill,
                     "timestamp": time.time()
                 }
                 self.executions.append(exec_data)
