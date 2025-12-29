@@ -81,6 +81,7 @@ class IBKRLiveTrader:
         order_type: str = "LIMIT",
         price_offset: float = 0.001,
         market_data_type: str = "delayed",
+        limit_order_timeout: int = 300,
     ):
         """
         Args:
@@ -90,6 +91,7 @@ class IBKRLiveTrader:
             order_type: 订单类型 ("LIMIT" 或 "MKT")
             price_offset: 限价单价格偏移（相对于当前价格的百分比，0.001=0.1%）
             market_data_type: 行情类型 ("real", "delayed", "delayed_frozen")
+            limit_order_timeout: 限价单超时时间（秒），超过后自动转为市价单
         """
         self.ib = IB()
         self.host = host
@@ -99,6 +101,7 @@ class IBKRLiveTrader:
         self.price_offset = price_offset
         self.market_data_type = market_data_type.lower()
         self.market_data_type_code = {"real": 1, "delayed": 3, "delayed_frozen": 4}.get(self.market_data_type, 3)
+        self.limit_order_timeout = limit_order_timeout
         self.order_times = {}  # 记录每个订单的下单时间
         self.orders: Dict[str, any] = {}  # ticker -> Trade
         self.positions: Dict[str, float] = {}  # ticker -> current_shares
@@ -496,15 +499,44 @@ class IBKRLiveTrader:
         positions = {}
         for pos in self.ib.positions():
             if pos.contract.secType == "STK":
-                ticker = pos.contract.symbol
+                ibkr_ticker = pos.contract.symbol
+                # 将IBKR格式转换为标准格式（例如：BRK B -> BRK-B）
+                ticker = self._normalize_ticker_from_ibkr(ibkr_ticker)
                 shares = pos.position
                 if abs(shares) > 1e-6:  # 忽略接近 0 的持仓
                     positions[ticker] = shares
-                    logger.info(f"  {ticker}: {shares:.2f} shares")
+                    if ibkr_ticker != ticker:
+                        logger.info(f"  {ticker} (IBKR: {ibkr_ticker}): {shares:.2f} shares")
+                    else:
+                        logger.info(f"  {ticker}: {shares:.2f} shares")
         self.positions = positions
         logger.info(f"[OK] Found {len(positions)} positions")
         return positions
 
+    @staticmethod
+    def _normalize_ticker_for_ibkr(ticker: str) -> list:
+        """将ticker转换为IBKR格式列表（例如：BRK-B -> ["BRK B", "BRK", "BRK.B"]）
+        
+        Returns:
+            list: IBKR格式列表，按优先级排序
+        """
+        # BRK-B在IBKR中可能有多种格式
+        if ticker == "BRK-B":
+            return ["BRK B", "BRK", "BRK.B"]
+        return [ticker]
+    
+    @staticmethod
+    def _normalize_ticker_from_ibkr(ticker: str) -> str:
+        """将IBKR返回的ticker转换为标准格式（例如：BRK B, BRK, BRK.B -> BRK-B）
+        
+        Returns:
+            str: 标准格式的ticker
+        """
+        # IBKR可能返回BRK B, BRK, BRK.B等格式，统一转换为BRK-B
+        if ticker in ["BRK B", "BRK", "BRK.B"]:
+            return "BRK-B"
+        return ticker
+    
     @staticmethod
     def _calculate_midprice(ticker_data) -> Optional[float]:
         """根据 bid/ask 计算 mid price"""
@@ -520,49 +552,60 @@ class IBKRLiveTrader:
 
     def get_realtime_price(self, ticker: str) -> Optional[float]:
         """获取实时/延迟价格（last / midpoint / close）- 同步版本"""
-        ticker_data = None
-        contract = None
-        try:
-            if not self.ib.isConnected():
-                logger.warning(f"  {ticker}: Not connected to IBKR")
-                return None
+        # 对于BRK-B，尝试多种IBKR格式
+        ibkr_formats = self._normalize_ticker_for_ibkr(ticker)
+        
+        for ibkr_ticker in ibkr_formats:
+            ticker_data = None
+            contract = None
+            try:
+                if not self.ib.isConnected():
+                    logger.warning(f"  {ticker}: Not connected to IBKR")
+                    return None
 
-            contract = Stock(ticker, "SMART", "USD")
-            # 同步 API
-            self.ib.qualifyContracts(contract)
+                contract = Stock(ibkr_ticker, "SMART", "USD")
+                # 同步 API
+                self.ib.qualifyContracts(contract)
 
-            # 请求市场数据，允许使用延迟行情
-            ticker_data = self.ib.reqMktData(contract, "", False, False)
-            # 等待价格更新（同步 sleep）
-            self.ib.sleep(1)
+                # 请求市场数据，允许使用延迟行情
+                ticker_data = self.ib.reqMktData(contract, "", False, False)
+                # 等待价格更新（同步 sleep）
+                self.ib.sleep(1)
 
-            price_sources = [
-                ("last", getattr(ticker_data, "last", None)),
-                ("mid", self._calculate_midprice(ticker_data)),
-                ("close", getattr(ticker_data, "close", None)),
-                ("delayedLast", getattr(ticker_data, "delayedLast", None)),
-                ("delayedClose", getattr(ticker_data, "delayedClose", None)),
-            ]
+                price_sources = [
+                    ("last", getattr(ticker_data, "last", None)),
+                    ("mid", self._calculate_midprice(ticker_data)),
+                    ("close", getattr(ticker_data, "close", None)),
+                    ("delayedLast", getattr(ticker_data, "delayedLast", None)),
+                    ("delayedClose", getattr(ticker_data, "delayedClose", None)),
+                ]
 
-            for source, value in price_sources:
-                if value and value > 0:
-                    logger.info(f"  {ticker}: ${value:.2f} ({source})")
-                    return value
+                for source, value in price_sources:
+                    if value and value > 0:
+                        if ibkr_ticker != ticker:
+                            logger.info(f"  {ticker}: ${value:.2f} ({source}) using IBKR format: {ibkr_ticker}")
+                        else:
+                            logger.info(f"  {ticker}: ${value:.2f} ({source})")
+                        return value
 
-            logger.warning(f"  {ticker}: No valid price data")
-            return None
-        except ConnectionError as e:
-            logger.warning(f"  {ticker}: Connection lost - {e}")
-            return None
-        except Exception as e:
-            logger.error(f"  {ticker}: Failed to get price - {e}")
-            return None
-        finally:
-            if contract and self.ib.isConnected():
-                try:
-                    self.ib.cancelMktData(contract)
-                except Exception:
-                    pass
+                # 如果这个格式没有价格，取消市场数据订阅，尝试下一个
+                if contract and self.ib.isConnected():
+                    try:
+                        self.ib.cancelMktData(contract)
+                    except Exception:
+                        pass
+            except Exception as e:
+                # 如果这个格式失败，尝试下一个
+                logger.debug(f"  {ticker}: Failed to get price with {ibkr_ticker}: {e}")
+                if contract and self.ib.isConnected():
+                    try:
+                        self.ib.cancelMktData(contract)
+                    except Exception:
+                        pass
+                continue
+
+        logger.warning(f"  {ticker}: No valid price data after trying all formats: {ibkr_formats}")
+        return None
 
     def get_realtime_prices(self, tickers: list) -> Dict[str, float]:
         """批量获取实时价格 - 同步版本"""
@@ -718,12 +761,16 @@ class IBKRLiveTrader:
                 
                 # 检查是否已经在 trades 中（不应该发生，但安全起见）
                 if ticker in trades:
-                    logger.warning(f"[Warning] {ticker}: Already in trades dict, overwriting with sell order")
+                    logger.warning(f"[Warning] {ticker}: Already in trades dict, overwriting with close order")
                 
-                trades[ticker] = -abs(current_shares)  # 负数表示卖出
+                # 修复：正确处理负持仓
+                # 如果持仓是正数，需要卖出（trade_shares < 0）
+                # 如果持仓是负数，需要买入来平仓（trade_shares > 0）
+                trades[ticker] = -current_shares  # 负数持仓会变成正数（买入），正数持仓会变成负数（卖出）
+                action = "BUY" if current_shares < 0 else "SELL"
                 logger.info(
-                    f"[Trade] {ticker}: SELL {abs(current_shares):.2f} shares "
-                    f"(not in target portfolio, current={current_shares:.2f}, price=${price:.2f}, value=${current_shares * price:,.2f})"
+                    f"[Trade] {ticker}: {action} {abs(current_shares):.2f} shares "
+                    f"(not in target portfolio, current={current_shares:.2f}, price=${price:.2f}, value=${abs(current_shares) * price:,.2f})"
                 )
         
         if not stocks_not_in_target:
@@ -824,48 +871,65 @@ class IBKRLiveTrader:
         price: float,
     ):
         """下单（限价单或市价单）- 同步版本"""
-        try:
-            if not self.ib.isConnected():
-                logger.error(f"[Error] {ticker}: Not connected to IBKR. Cannot place order.")
-                return None
+        # 对于BRK-B，尝试多种IBKR格式
+        ibkr_formats = self._normalize_ticker_for_ibkr(ticker)
+        
+        for ibkr_ticker in ibkr_formats:
+            try:
+                if not self.ib.isConnected():
+                    logger.error(f"[Error] {ticker}: Not connected to IBKR. Cannot place order.")
+                    return None
 
-            contract = Stock(ticker, "SMART", "USD")
-            # ib_insync 同步 API
-            self.ib.qualifyContracts(contract)
+                contract = Stock(ibkr_ticker, "SMART", "USD")
+                # ib_insync 同步 API
+                self.ib.qualifyContracts(contract)
 
-            if self.order_type == "LIMIT":
-                # 限价单：买入时价格 + offset，卖出时价格 - offset
-                limit_price = price * (1 + self.price_offset) if trade_shares > 0 else price * (1 - self.price_offset)
-                order = LimitOrder(
-                    action="BUY" if trade_shares > 0 else "SELL",
-                    totalQuantity=abs(int(trade_shares)),
-                    lmtPrice=round(limit_price, 2),
-                    outsideRth=True,  # 允许盘前/盘后交易
-                )
-                logger.info(f"[Order] {ticker}: LIMIT {order.action} {order.totalQuantity} @ ${order.lmtPrice:.2f}")
-            elif self.order_type == "MKT":
-                # 市价单（风险较高，不推荐）
-                order = MarketOrder(
-                    action="BUY" if trade_shares > 0 else "SELL",
-                    totalQuantity=abs(int(trade_shares)),
-                )
-                logger.warning(f"[Order] {ticker}: MARKET {order.action} {order.totalQuantity} (RISKY!)")
-            else:
-                raise ValueError(f"Unsupported order type: {self.order_type}")
+                if self.order_type == "LIMIT":
+                    # 限价单：买入时价格 + offset，卖出时价格 - offset
+                    limit_price = price * (1 + self.price_offset) if trade_shares > 0 else price * (1 - self.price_offset)
+                    order = LimitOrder(
+                        action="BUY" if trade_shares > 0 else "SELL",
+                        totalQuantity=abs(int(trade_shares)),
+                        lmtPrice=round(limit_price, 2),
+                        outsideRth=True,  # 允许盘前/盘后交易
+                    )
+                    if ibkr_ticker != ticker:
+                        logger.info(f"[Order] {ticker}: LIMIT {order.action} {order.totalQuantity} @ ${order.lmtPrice:.2f} using IBKR format: {ibkr_ticker}")
+                    else:
+                        logger.info(f"[Order] {ticker}: LIMIT {order.action} {order.totalQuantity} @ ${order.lmtPrice:.2f}")
+                elif self.order_type == "MKT":
+                    # 市价单（风险较高，不推荐）
+                    order = MarketOrder(
+                        action="BUY" if trade_shares > 0 else "SELL",
+                        totalQuantity=abs(int(trade_shares)),
+                    )
+                    if ibkr_ticker != ticker:
+                        logger.warning(f"[Order] {ticker}: MARKET {order.action} {order.totalQuantity} (RISKY!) using IBKR format: {ibkr_ticker}")
+                    else:
+                        logger.warning(f"[Order] {ticker}: MARKET {order.action} {order.totalQuantity} (RISKY!)")
+                else:
+                    raise ValueError(f"Unsupported order type: {self.order_type}")
 
-            # ib_insync 同步 API：直接调用 placeOrder（返回 Trade 对象）
-            trade = self.ib.placeOrder(contract, order)
-            self.orders[ticker] = trade
-            self.order_times[ticker] = time.time()  # 记录下单时间
-            logger.info(f"[OK] Order placed for {ticker} (orderId={trade.order.orderId})")
+                # ib_insync 同步 API：直接调用 placeOrder（返回 Trade 对象）
+                trade = self.ib.placeOrder(contract, order)
+                self.orders[ticker] = trade
+                self.order_times[ticker] = time.time()  # 记录下单时间
+                if ibkr_ticker != ticker:
+                    logger.info(f"[OK] Order placed for {ticker} (orderId={trade.order.orderId}) using IBKR format: {ibkr_ticker}")
+                else:
+                    logger.info(f"[OK] Order placed for {ticker} (orderId={trade.order.orderId})")
 
-            return trade
-        except ConnectionError as e:
-            logger.error(f"[Error] {ticker}: Connection lost - {e}")
-            return None
-        except Exception as e:
-            logger.error(f"[Error] Failed to place order for {ticker}: {e}")
-            return None
+                return trade
+            except Exception as e:
+                # 如果这个格式失败，尝试下一个
+                logger.debug(f"[Error] Failed to place order for {ticker} with {ibkr_ticker}: {e}")
+                if ibkr_ticker == ibkr_formats[-1]:
+                    # 最后一个格式也失败了
+                    logger.error(f"[Error] Failed to place order for {ticker} after trying all formats: {ibkr_formats}")
+                    return None
+                continue
+        
+        return None
 
     def wait_for_orders(self, timeout: int = 300, limit_order_timeout: int = 300, prices: Optional[Dict[str, float]] = None):
         """
@@ -1022,13 +1086,14 @@ class IBKRLiveTrader:
                 self.place_order(ticker, trade_shares, price)
 
         # 4. 等待订单成交（传入价格字典用于转为市价单）
-        self.wait_for_orders(limit_order_timeout=300, prices=prices)  # 5分钟 = 300秒
+        self.wait_for_orders(limit_order_timeout=self.limit_order_timeout, prices=prices)
 
     def run(
         self,
         weights_path: Path,
         total_capital: float,
         capital_usage_ratio: float = 0.90,
+        limit_order_timeout: Optional[int] = None,
     ):
         """
         主流程 - 同步版本
@@ -1037,7 +1102,10 @@ class IBKRLiveTrader:
             weights_path: 权重文件路径
             total_capital: 指定的总资金（如果为 None 或 0，则自动读取账户资金）
             capital_usage_ratio: 资金使用比例（0.90 = 只用90%，留10%缓冲）
+            limit_order_timeout: 限价单超时时间（秒），如果为None则使用初始化时的值
         """
+        if limit_order_timeout is not None:
+            self.limit_order_timeout = limit_order_timeout
         try:
             # 连接
             self.connect()
@@ -1179,6 +1247,12 @@ def main():
         choices=["real", "delayed", "delayed_frozen"],
         help="行情类型（real/delayed/delayed_frozen）",
     )
+    parser.add_argument(
+        "--limit-order-timeout",
+        type=int,
+        default=300,
+        help="限价单超时时间（秒），超过后自动转为市价单 (默认 300s = 5分钟)",
+    )
     args = parser.parse_args()
 
     trader = IBKRLiveTrader(
@@ -1188,6 +1262,7 @@ def main():
         order_type=args.order_type,
         price_offset=args.price_offset,
         market_data_type=args.market_data_type,
+        limit_order_timeout=args.limit_order_timeout,
     )
 
     # 处理权重文件路径
@@ -1199,7 +1274,7 @@ def main():
         from src.config.path import ROOT_DIR
         weights_path = (ROOT_DIR / args.weights).resolve()
     
-    trader.run(weights_path, args.capital, args.capital_usage_ratio)
+    trader.run(weights_path, args.capital, args.capital_usage_ratio, limit_order_timeout=args.limit_order_timeout)
 
 
 if __name__ == "__main__":
